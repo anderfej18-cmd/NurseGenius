@@ -1,0 +1,1 @@
+REVOKE ALL ON FUNCTION public.activate_subscription(public.user_tier, text, numeric) FROM PUBLIC, anon, authenticated;

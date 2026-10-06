@@ -1,0 +1,10 @@
+REVOKE ALL ON FUNCTION public.get_custom_test_by_token(text) FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.start_custom_test_attempt(text, text, text) FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.submit_custom_test_attempt(uuid, text, jsonb) FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.get_custom_test_attempt_results(uuid, text) FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.claim_custom_test_attempt(uuid, text) FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.get_custom_test_analytics(uuid) FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.republish_custom_test(uuid, timestamp with time zone) FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.add_custom_test_to_question_bank(uuid, public.exam_type, text) FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.central_admin_search_users(text) FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.get_subadmin_user_directory() FROM PUBLIC, anon, authenticated;

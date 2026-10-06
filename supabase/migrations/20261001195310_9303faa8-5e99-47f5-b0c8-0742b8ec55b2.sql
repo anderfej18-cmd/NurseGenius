@@ -1,0 +1,1 @@
+GRANT EXECUTE ON FUNCTION public.activate_subscription(public.user_tier, text, numeric) TO authenticated;

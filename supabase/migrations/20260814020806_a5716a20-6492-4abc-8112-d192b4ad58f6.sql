@@ -1,0 +1,1 @@
+ALTER TABLE public.profiles DROP COLUMN IF EXISTS legal_full_name;
