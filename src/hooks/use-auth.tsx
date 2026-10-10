@@ -79,16 +79,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => sub.subscription.unsubscribe();
   }, []);
 
-  const refresh = async () => { if (user) await loadProfileAndRoles(user.id); };
-  const signOut = async () => { await supabase.auth.signOut(); };
+  const refresh = async () => {
+    if (user) await loadProfileAndRoles(user.id);
+  };
+  const signOut = async () => {
+    await supabase.auth.signOut();
+  };
 
   return (
-    <Ctx.Provider value={{
-      user, session, profile, roles, loading,
-      isAdmin: roles.includes("admin") || roles.includes("central_admin"),
-      isCentralAdmin: roles.includes("central_admin"),
-      refresh, signOut,
-    }}>
+    <Ctx.Provider
+      value={{
+        user,
+        session,
+        profile,
+        roles,
+        loading,
+        isAdmin: roles.includes("admin") || roles.includes("central_admin"),
+        isCentralAdmin: roles.includes("central_admin"),
+        refresh,
+        signOut,
+      }}
+    >
       {children}
     </Ctx.Provider>
   );
@@ -100,26 +111,5 @@ export function useAuth() {
   return v;
 }
 
-export const TIER_LABEL: Record<Tier, string> = {
-  novice: "Novice",
-  erudite: "Erudite",
-  scholar: "Scholar",
-};
-// Daily caps (null = unlimited)
-export const TIER_DAILY_LIMIT: Record<Tier, number | null> = {
-  novice: 50,
-  erudite: 500,
-  scholar: null,
-};
-// Per-session cap (max questions in one quiz)
-export const TIER_SESSION_LIMIT: Record<Tier, number> = {
-  novice: 50,
-  erudite: 150,
-  scholar: 250,
-};
-// Back-compat alias used by older components — represents the daily allowance ceiling shown in UI
-export const TIER_LIMIT: Record<Tier, number> = {
-  novice: 50,
-  erudite: 500,
-  scholar: 250,
-};
+// Names and limits live in "@/lib/exam-rules" so the server enforces the same numbers the UI displays.
+export { TIER_DAILY_LIMIT, TIER_LABEL, TIER_SESSION_LIMIT } from "@/lib/exam-rules";

@@ -11,11 +11,25 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import { z } from "zod";
 
-export const Route = createFileRoute("/auth")({ component: AuthPage, head: () => ({ meta: [
-  { title: "Sign In or Join — NurseGenius" }, { name: "description", content: "Sign in or create a NurseGenius account for RN and RM exam practice." },
-  { property: "og:title", content: "Sign In or Join — NurseGenius" }, { property: "og:description", content: "Access RN and RM exam practice with a NurseGenius account." },
-  { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" },
-] }) });
+export const Route = createFileRoute("/auth")({
+  component: AuthPage,
+  head: () => ({
+    meta: [
+      { title: "Sign In or Join — NurseGenius" },
+      {
+        name: "description",
+        content: "Sign in or create a NurseGenius account for RN and RM exam practice.",
+      },
+      { property: "og:title", content: "Sign In or Join — NurseGenius" },
+      {
+        property: "og:description",
+        content: "Access RN and RM exam practice with a NurseGenius account.",
+      },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
+    ],
+  }),
+});
 
 const emailSchema = z.string().trim().email().max(255);
 const pwSchema = z.string().min(6).max(72);
@@ -29,7 +43,9 @@ function AuthPage() {
     try {
       const pending = sessionStorage.getItem("ng.sharedTestAttempt");
       if (pending) setTestEmail((JSON.parse(pending) as { email?: string }).email ?? "");
-    } catch { setTestEmail(""); }
+    } catch {
+      setTestEmail("");
+    }
   }, []);
 
   useEffect(() => {
@@ -45,15 +61,21 @@ function AuthPage() {
       <main className="container mx-auto px-4 py-12 max-w-md">
         <Card className="p-6 bg-card-soft shadow-glow">
           <h1 className="text-2xl font-bold text-center">Welcome to NurseGenius</h1>
-          <p className="text-center text-sm text-muted-foreground mt-1">Sign in or create an account</p>
+          <p className="text-center text-sm text-muted-foreground mt-1">
+            Sign in or create an account
+          </p>
 
           <Tabs defaultValue="signin" className="mt-6">
             <TabsList className="grid w-full grid-cols-2">
               <TabsTrigger value="signin">Sign In</TabsTrigger>
               <TabsTrigger value="signup">Sign Up</TabsTrigger>
             </TabsList>
-            <TabsContent value="signin"><SignInForm initialEmail={testEmail} /></TabsContent>
-            <TabsContent value="signup"><SignUpForm initialEmail={testEmail} /></TabsContent>
+            <TabsContent value="signin">
+              <SignInForm initialEmail={testEmail} />
+            </TabsContent>
+            <TabsContent value="signup">
+              <SignUpForm initialEmail={testEmail} />
+            </TabsContent>
           </Tabs>
 
           <div className="my-4 flex items-center gap-3">
@@ -74,13 +96,19 @@ function SignInForm({ initialEmail }: { initialEmail: string }) {
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
 
-  useEffect(() => { if (initialEmail) setEmail(initialEmail); }, [initialEmail]);
+  useEffect(() => {
+    if (initialEmail) setEmail(initialEmail);
+  }, [initialEmail]);
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      emailSchema.parse(email); pwSchema.parse(password);
-    } catch { toast.error("Enter a valid email and password"); return; }
+      emailSchema.parse(email);
+      pwSchema.parse(password);
+    } catch {
+      toast.error("Enter a valid email and password");
+      return;
+    }
     setBusy(true);
     const { error } = await supabase.auth.signInWithPassword({ email, password });
     setBusy(false);
@@ -89,9 +117,22 @@ function SignInForm({ initialEmail }: { initialEmail: string }) {
 
   return (
     <form onSubmit={submit} className="space-y-3 mt-4">
-      <div><Label>Email</Label><Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required /></div>
-      <div><Label>Password</Label><Input type="password" value={password} onChange={(e) => setPassword(e.target.value)} required /></div>
-      <Button type="submit" disabled={busy} className="w-full bg-hero">Sign In</Button>
+      <div>
+        <Label>Email</Label>
+        <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
+      </div>
+      <div>
+        <Label>Password</Label>
+        <Input
+          type="password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          required
+        />
+      </div>
+      <Button type="submit" disabled={busy} className="w-full bg-hero">
+        Sign In
+      </Button>
     </form>
   );
 }
@@ -101,16 +142,23 @@ function SignUpForm({ initialEmail }: { initialEmail: string }) {
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
 
-  useEffect(() => { if (initialEmail) setEmail(initialEmail); }, [initialEmail]);
+  useEffect(() => {
+    if (initialEmail) setEmail(initialEmail);
+  }, [initialEmail]);
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      emailSchema.parse(email); pwSchema.parse(password);
-    } catch { toast.error("Email + password (min 6 chars) required"); return; }
+      emailSchema.parse(email);
+      pwSchema.parse(password);
+    } catch {
+      toast.error("Email + password (min 6 chars) required");
+      return;
+    }
     setBusy(true);
     const { error } = await supabase.auth.signUp({
-      email, password,
+      email,
+      password,
       options: { emailRedirectTo: `${window.location.origin}/onboarding` },
     });
     setBusy(false);
@@ -120,9 +168,23 @@ function SignUpForm({ initialEmail }: { initialEmail: string }) {
 
   return (
     <form onSubmit={submit} className="space-y-3 mt-4">
-      <div><Label>Email</Label><Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required /></div>
-      <div><Label>Password</Label><Input type="password" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={6} /></div>
-      <Button type="submit" disabled={busy} className="w-full bg-hero">Create Account</Button>
+      <div>
+        <Label>Email</Label>
+        <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
+      </div>
+      <div>
+        <Label>Password</Label>
+        <Input
+          type="password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          required
+          minLength={6}
+        />
+      </div>
+      <Button type="submit" disabled={busy} className="w-full bg-hero">
+        Create Account
+      </Button>
     </form>
   );
 }
@@ -135,7 +197,10 @@ function GoogleButton() {
       provider: "google",
       options: { redirectTo: `${window.location.origin}/onboarding` },
     });
-    if (error) { toast.error(error.message); setBusy(false); }
+    if (error) {
+      toast.error(error.message);
+      setBusy(false);
+    }
   };
   return (
     <Button variant="outline" className="w-full" onClick={onClick} disabled={busy}>

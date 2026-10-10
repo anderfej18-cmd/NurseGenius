@@ -1,7 +1,9 @@
 // Loads the Paystack inline script on demand and exposes a typed setup helper.
 const SRC = "https://js.paystack.co/v1/inline.js";
 
-interface PaystackHandler { openIframe: () => void }
+interface PaystackHandler {
+  openIframe: () => void;
+}
 interface PaystackOptions {
   key: string;
   email: string;
@@ -12,10 +14,14 @@ interface PaystackOptions {
   callback: (res: { reference: string }) => void;
   onClose: () => void;
 }
-interface PaystackPop { setup: (o: PaystackOptions) => PaystackHandler }
+interface PaystackPop {
+  setup: (o: PaystackOptions) => PaystackHandler;
+}
 
 declare global {
-  interface Window { PaystackPop?: PaystackPop }
+  interface Window {
+    PaystackPop?: PaystackPop;
+  }
 }
 
 let loading: Promise<PaystackPop> | null = null;
@@ -36,7 +42,10 @@ export function loadPaystack(): Promise<PaystackPop> {
       if (window.PaystackPop) resolve(window.PaystackPop);
       else reject(new Error("Paystack failed to initialise"));
     };
-    el.onerror = () => { loading = null; reject(new Error("Could not load Paystack")); };
+    el.onerror = () => {
+      loading = null;
+      reject(new Error("Could not load Paystack"));
+    };
     document.head.appendChild(el);
   });
   return loading;

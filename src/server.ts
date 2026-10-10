@@ -1,7 +1,8 @@
-import "./lib/error-capture";
+import "./server/ssr/error-capture";
 
-import { consumeLastCapturedError } from "./lib/error-capture";
-import { renderErrorPage } from "./lib/error-page";
+import { consumeLastCapturedError } from "./server/ssr/error-capture";
+import { withSecurityHeaders } from "./server/http/security-headers";
+import { renderErrorPage } from "./server/ssr/error-page";
 
 type ServerEntry = {
   fetch: (request: Request, env: unknown, ctx: unknown) => Promise<Response> | Response;
@@ -12,7 +13,7 @@ let serverEntryPromise: Promise<ServerEntry> | undefined;
 async function getServerEntry(): Promise<ServerEntry> {
   if (!serverEntryPromise) {
     serverEntryPromise = import("@tanstack/react-start/server-entry").then(
-      (m) => ((m as { default?: ServerEntry }).default ?? (m as unknown as ServerEntry)),
+      (m) => (m as { default?: ServerEntry }).default ?? (m as unknown as ServerEntry),
     );
   }
   return serverEntryPromise;
@@ -90,17 +91,20 @@ function isClientAbortError(error: unknown): boolean {
 
 export default {
   async fetch(request: Request, env: unknown, ctx: unknown) {
-    try {
-      const handler = await getServerEntry();
-      const response = await handler.fetch(request, env, ctx);
-      return await normalizeCatastrophicSsrResponse(response);
-    } catch (error) {
-      if (isClientAbortError(error) || request.signal?.aborted) {
-        return new Response(null, { status: 499 });
-      }
-      console.error(error);
-      return brandedErrorResponse();
-    }
+    return withSecurityHeaders(request, await respond(request, env, ctx));
   },
 };
 
+async function respond(request: Request, env: unknown, ctx: unknown): Promise<Response> {
+  try {
+    const handler = await getServerEntry();
+    const response = await handler.fetch(request, env, ctx);
+    return await normalizeCatastrophicSsrResponse(response);
+  } catch (error) {
+    if (isClientAbortError(error) || request.signal?.aborted) {
+      return new Response(null, { status: 499 });
+    }
+    console.error(error);
+    return brandedErrorResponse();
+  }
+}

@@ -10,12 +10,25 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AchievementsRouteImport } from './routes/achievements'
 import { Route as AdminRouteImport } from './routes/admin'
+import { Route as AnalysisRouteImport } from './routes/analysis'
 import { Route as AuthRouteImport } from './routes/auth'
+import { Route as BookmarksRouteImport } from './routes/bookmarks'
 import { Route as DashboardRouteImport } from './routes/dashboard'
+import { Route as FriendsRouteImport } from './routes/friends'
+import { Route as HistoryRouteImport } from './routes/history'
 import { Route as LeaderboardRouteImport } from './routes/leaderboard'
+import { Route as MasteryRouteImport } from './routes/mastery'
+import { Route as MistakesRouteImport } from './routes/mistakes'
+import { Route as NotificationsRouteImport } from './routes/notifications'
 import { Route as OnboardingRouteImport } from './routes/onboarding'
 import { Route as PaymentsRouteImport } from './routes/payments'
+import { Route as PlanRouteImport } from './routes/plan'
+import { Route as ProfileRouteImport } from './routes/profile'
+import { Route as ProgressRouteImport } from './routes/progress'
+import { Route as TodayRouteImport } from './routes/today'
+import { Route as TopicsRouteImport } from './routes/topics'
 import { Route as ExamExamIdRouteImport } from './routes/exam.$examId'
 import { Route as ExamStartRouteImport } from './routes/exam.start'
 import { Route as TestTokenRouteImport } from './routes/test.$token'
@@ -28,9 +41,19 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AchievementsRoute = AchievementsRouteImport.update({
+  id: '/achievements',
+  path: '/achievements',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AdminRoute = AdminRouteImport.update({
   id: '/admin',
   path: '/admin',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AnalysisRoute = AnalysisRouteImport.update({
+  id: '/analysis',
+  path: '/analysis',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthRoute = AuthRouteImport.update({
@@ -38,14 +61,44 @@ const AuthRoute = AuthRouteImport.update({
   path: '/auth',
   getParentRoute: () => rootRouteImport,
 } as any)
+const BookmarksRoute = BookmarksRouteImport.update({
+  id: '/bookmarks',
+  path: '/bookmarks',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const DashboardRoute = DashboardRouteImport.update({
   id: '/dashboard',
   path: '/dashboard',
   getParentRoute: () => rootRouteImport,
 } as any)
+const FriendsRoute = FriendsRouteImport.update({
+  id: '/friends',
+  path: '/friends',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const HistoryRoute = HistoryRouteImport.update({
+  id: '/history',
+  path: '/history',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const LeaderboardRoute = LeaderboardRouteImport.update({
   id: '/leaderboard',
   path: '/leaderboard',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MasteryRoute = MasteryRouteImport.update({
+  id: '/mastery',
+  path: '/mastery',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MistakesRoute = MistakesRouteImport.update({
+  id: '/mistakes',
+  path: '/mistakes',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const NotificationsRoute = NotificationsRouteImport.update({
+  id: '/notifications',
+  path: '/notifications',
   getParentRoute: () => rootRouteImport,
 } as any)
 const OnboardingRoute = OnboardingRouteImport.update({
@@ -56,6 +109,31 @@ const OnboardingRoute = OnboardingRouteImport.update({
 const PaymentsRoute = PaymentsRouteImport.update({
   id: '/payments',
   path: '/payments',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PlanRoute = PlanRouteImport.update({
+  id: '/plan',
+  path: '/plan',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ProfileRoute = ProfileRouteImport.update({
+  id: '/profile',
+  path: '/profile',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ProgressRoute = ProgressRouteImport.update({
+  id: '/progress',
+  path: '/progress',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TodayRoute = TodayRouteImport.update({
+  id: '/today',
+  path: '/today',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TopicsRoute = TopicsRouteImport.update({
+  id: '/topics',
+  path: '/topics',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ExamExamIdRoute = ExamExamIdRouteImport.update({
@@ -91,12 +169,25 @@ const ExamExamIdResultsRoute = ExamExamIdResultsRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/achievements': typeof AchievementsRoute
   '/admin': typeof AdminRoute
+  '/analysis': typeof AnalysisRoute
   '/auth': typeof AuthRoute
+  '/bookmarks': typeof BookmarksRoute
   '/dashboard': typeof DashboardRoute
+  '/friends': typeof FriendsRoute
+  '/history': typeof HistoryRoute
   '/leaderboard': typeof LeaderboardRoute
+  '/mastery': typeof MasteryRoute
+  '/mistakes': typeof MistakesRoute
+  '/notifications': typeof NotificationsRoute
   '/onboarding': typeof OnboardingRoute
   '/payments': typeof PaymentsRoute
+  '/plan': typeof PlanRoute
+  '/profile': typeof ProfileRoute
+  '/progress': typeof ProgressRoute
+  '/today': typeof TodayRoute
+  '/topics': typeof TopicsRoute
   '/exam/$examId': typeof ExamExamIdRouteWithChildren
   '/exam/start': typeof ExamStartRoute
   '/test/$token': typeof TestTokenRoute
@@ -106,12 +197,25 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/achievements': typeof AchievementsRoute
   '/admin': typeof AdminRoute
+  '/analysis': typeof AnalysisRoute
   '/auth': typeof AuthRoute
+  '/bookmarks': typeof BookmarksRoute
   '/dashboard': typeof DashboardRoute
+  '/friends': typeof FriendsRoute
+  '/history': typeof HistoryRoute
   '/leaderboard': typeof LeaderboardRoute
+  '/mastery': typeof MasteryRoute
+  '/mistakes': typeof MistakesRoute
+  '/notifications': typeof NotificationsRoute
   '/onboarding': typeof OnboardingRoute
   '/payments': typeof PaymentsRoute
+  '/plan': typeof PlanRoute
+  '/profile': typeof ProfileRoute
+  '/progress': typeof ProgressRoute
+  '/today': typeof TodayRoute
+  '/topics': typeof TopicsRoute
   '/exam/start': typeof ExamStartRoute
   '/test/$token': typeof TestTokenRoute
   '/api/public/paystack-verify': typeof ApiPublicPaystackVerifyRoute
@@ -121,12 +225,25 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/achievements': typeof AchievementsRoute
   '/admin': typeof AdminRoute
+  '/analysis': typeof AnalysisRoute
   '/auth': typeof AuthRoute
+  '/bookmarks': typeof BookmarksRoute
   '/dashboard': typeof DashboardRoute
+  '/friends': typeof FriendsRoute
+  '/history': typeof HistoryRoute
   '/leaderboard': typeof LeaderboardRoute
+  '/mastery': typeof MasteryRoute
+  '/mistakes': typeof MistakesRoute
+  '/notifications': typeof NotificationsRoute
   '/onboarding': typeof OnboardingRoute
   '/payments': typeof PaymentsRoute
+  '/plan': typeof PlanRoute
+  '/profile': typeof ProfileRoute
+  '/progress': typeof ProgressRoute
+  '/today': typeof TodayRoute
+  '/topics': typeof TopicsRoute
   '/exam/$examId': typeof ExamExamIdRouteWithChildren
   '/exam/start': typeof ExamStartRoute
   '/test/$token': typeof TestTokenRoute
@@ -138,12 +255,25 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/achievements'
     | '/admin'
+    | '/analysis'
     | '/auth'
+    | '/bookmarks'
     | '/dashboard'
+    | '/friends'
+    | '/history'
     | '/leaderboard'
+    | '/mastery'
+    | '/mistakes'
+    | '/notifications'
     | '/onboarding'
     | '/payments'
+    | '/plan'
+    | '/profile'
+    | '/progress'
+    | '/today'
+    | '/topics'
     | '/exam/$examId'
     | '/exam/start'
     | '/test/$token'
@@ -153,12 +283,25 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/achievements'
     | '/admin'
+    | '/analysis'
     | '/auth'
+    | '/bookmarks'
     | '/dashboard'
+    | '/friends'
+    | '/history'
     | '/leaderboard'
+    | '/mastery'
+    | '/mistakes'
+    | '/notifications'
     | '/onboarding'
     | '/payments'
+    | '/plan'
+    | '/profile'
+    | '/progress'
+    | '/today'
+    | '/topics'
     | '/exam/start'
     | '/test/$token'
     | '/api/public/paystack-verify'
@@ -167,12 +310,25 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/'
+    | '/achievements'
     | '/admin'
+    | '/analysis'
     | '/auth'
+    | '/bookmarks'
     | '/dashboard'
+    | '/friends'
+    | '/history'
     | '/leaderboard'
+    | '/mastery'
+    | '/mistakes'
+    | '/notifications'
     | '/onboarding'
     | '/payments'
+    | '/plan'
+    | '/profile'
+    | '/progress'
+    | '/today'
+    | '/topics'
     | '/exam/$examId'
     | '/exam/start'
     | '/test/$token'
@@ -183,12 +339,25 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AchievementsRoute: typeof AchievementsRoute
   AdminRoute: typeof AdminRoute
+  AnalysisRoute: typeof AnalysisRoute
   AuthRoute: typeof AuthRoute
+  BookmarksRoute: typeof BookmarksRoute
   DashboardRoute: typeof DashboardRoute
+  FriendsRoute: typeof FriendsRoute
+  HistoryRoute: typeof HistoryRoute
   LeaderboardRoute: typeof LeaderboardRoute
+  MasteryRoute: typeof MasteryRoute
+  MistakesRoute: typeof MistakesRoute
+  NotificationsRoute: typeof NotificationsRoute
   OnboardingRoute: typeof OnboardingRoute
   PaymentsRoute: typeof PaymentsRoute
+  PlanRoute: typeof PlanRoute
+  ProfileRoute: typeof ProfileRoute
+  ProgressRoute: typeof ProgressRoute
+  TodayRoute: typeof TodayRoute
+  TopicsRoute: typeof TopicsRoute
   ExamExamIdRoute: typeof ExamExamIdRouteWithChildren
   ExamStartRoute: typeof ExamStartRoute
   TestTokenRoute: typeof TestTokenRoute
@@ -204,11 +373,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/achievements': {
+      id: '/achievements'
+      path: '/achievements'
+      fullPath: '/achievements'
+      preLoaderRoute: typeof AchievementsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/admin': {
       id: '/admin'
       path: '/admin'
       fullPath: '/admin'
       preLoaderRoute: typeof AdminRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/analysis': {
+      id: '/analysis'
+      path: '/analysis'
+      fullPath: '/analysis'
+      preLoaderRoute: typeof AnalysisRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/auth': {
@@ -218,6 +401,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/bookmarks': {
+      id: '/bookmarks'
+      path: '/bookmarks'
+      fullPath: '/bookmarks'
+      preLoaderRoute: typeof BookmarksRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/dashboard': {
       id: '/dashboard'
       path: '/dashboard'
@@ -225,11 +415,46 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DashboardRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/friends': {
+      id: '/friends'
+      path: '/friends'
+      fullPath: '/friends'
+      preLoaderRoute: typeof FriendsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/history': {
+      id: '/history'
+      path: '/history'
+      fullPath: '/history'
+      preLoaderRoute: typeof HistoryRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/leaderboard': {
       id: '/leaderboard'
       path: '/leaderboard'
       fullPath: '/leaderboard'
       preLoaderRoute: typeof LeaderboardRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/mastery': {
+      id: '/mastery'
+      path: '/mastery'
+      fullPath: '/mastery'
+      preLoaderRoute: typeof MasteryRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/mistakes': {
+      id: '/mistakes'
+      path: '/mistakes'
+      fullPath: '/mistakes'
+      preLoaderRoute: typeof MistakesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/notifications': {
+      id: '/notifications'
+      path: '/notifications'
+      fullPath: '/notifications'
+      preLoaderRoute: typeof NotificationsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/onboarding': {
@@ -244,6 +469,41 @@ declare module '@tanstack/react-router' {
       path: '/payments'
       fullPath: '/payments'
       preLoaderRoute: typeof PaymentsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/plan': {
+      id: '/plan'
+      path: '/plan'
+      fullPath: '/plan'
+      preLoaderRoute: typeof PlanRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/profile': {
+      id: '/profile'
+      path: '/profile'
+      fullPath: '/profile'
+      preLoaderRoute: typeof ProfileRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/progress': {
+      id: '/progress'
+      path: '/progress'
+      fullPath: '/progress'
+      preLoaderRoute: typeof ProgressRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/today': {
+      id: '/today'
+      path: '/today'
+      fullPath: '/today'
+      preLoaderRoute: typeof TodayRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/topics': {
+      id: '/topics'
+      path: '/topics'
+      fullPath: '/topics'
+      preLoaderRoute: typeof TopicsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/exam/$examId': {
@@ -307,12 +567,25 @@ const ExamExamIdRouteWithChildren = ExamExamIdRoute._addFileChildren(
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AchievementsRoute: AchievementsRoute,
   AdminRoute: AdminRoute,
+  AnalysisRoute: AnalysisRoute,
   AuthRoute: AuthRoute,
+  BookmarksRoute: BookmarksRoute,
   DashboardRoute: DashboardRoute,
+  FriendsRoute: FriendsRoute,
+  HistoryRoute: HistoryRoute,
   LeaderboardRoute: LeaderboardRoute,
+  MasteryRoute: MasteryRoute,
+  MistakesRoute: MistakesRoute,
+  NotificationsRoute: NotificationsRoute,
   OnboardingRoute: OnboardingRoute,
   PaymentsRoute: PaymentsRoute,
+  PlanRoute: PlanRoute,
+  ProfileRoute: ProfileRoute,
+  ProgressRoute: ProgressRoute,
+  TodayRoute: TodayRoute,
+  TopicsRoute: TopicsRoute,
   ExamExamIdRoute: ExamExamIdRouteWithChildren,
   ExamStartRoute: ExamStartRoute,
   TestTokenRoute: TestTokenRoute,

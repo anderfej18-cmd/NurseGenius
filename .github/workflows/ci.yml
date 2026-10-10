@@ -1,0 +1,24 @@
+name: CI
+
+# Runs the same four checks as a developer. No secrets are used or needed: the database tests replay
+# the migrations on an in-process PGlite, and the build reads no server settings.
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+      - run: bun install --frozen-lockfile
+      - run: bun run test
+      - run: bun run lint
+      - run: bun run typecheck
+      - run: bun run build

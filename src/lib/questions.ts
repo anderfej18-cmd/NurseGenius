@@ -21,7 +21,10 @@ export function questionIssues(question: QuestionFields): string[] {
   for (const key of OPTION_KEYS) {
     if (!question[key]?.trim()) issues.push(`${key.replace("option_", "Option ").toUpperCase()}`);
   }
-  if (!question.correct_answer || !["A", "B", "C", "D"].includes(question.correct_answer.trim().toUpperCase())) {
+  if (
+    !question.correct_answer ||
+    !["A", "B", "C", "D"].includes(question.correct_answer.trim().toUpperCase())
+  ) {
     issues.push("correct answer");
   }
   return issues;

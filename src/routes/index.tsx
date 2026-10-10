@@ -8,14 +8,24 @@ import { Brain, Trophy, Timer, Sparkles, ShieldCheck, GraduationCap } from "luci
 
 export const Route = createFileRoute("/")({
   component: Index,
-  head: () => ({ meta: [
-    { title: "NurseGenius — RN & RM Exam Practice" },
-    { name: "description", content: "Prepare for Nigerian nursing exams with timed RN and RM practice, explanations, and progress tracking." },
-    { property: "og:title", content: "NurseGenius — RN & RM Exam Practice" },
-    { property: "og:description", content: "Timed nursing exam practice, clear explanations, and progress tracking for RN and RM candidates." },
-    { property: "og:type", content: "website" },
-    { name: "twitter:card", content: "summary" },
-  ] }),
+  head: () => ({
+    meta: [
+      { title: "NurseGenius — RN & RM Exam Practice" },
+      {
+        name: "description",
+        content:
+          "Prepare for Nigerian nursing exams with timed RN and RM practice, explanations, and progress tracking.",
+      },
+      { property: "og:title", content: "NurseGenius — RN & RM Exam Practice" },
+      {
+        property: "og:description",
+        content:
+          "Timed nursing exam practice, clear explanations, and progress tracking for RN and RM candidates.",
+      },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
+    ],
+  }),
 });
 
 function Index() {
@@ -36,18 +46,26 @@ function Index() {
             AI-powered nursing exam prep
           </div>
           <h1 className="mt-6 text-4xl md:text-6xl font-bold tracking-tight max-w-3xl mx-auto">
-            Master your <span className="bg-hero bg-clip-text text-transparent">RN & RM CBT</span> with confidence
+            Master your <span className="bg-hero bg-clip-text text-transparent">RN & RM CBT</span>{" "}
+            with confidence
           </h1>
           <p className="mt-6 text-lg text-muted-foreground max-w-2xl mx-auto">
-            Practice realistic CBT exams, get instant AI explanations, and track your progress with a system built for nursing students.
+            Practice realistic CBT exams, get AI explanations once you finish a test, and track your
+            progress with a system built for nursing students.
           </p>
           <div className="mt-8 flex flex-wrap justify-center gap-3">
             {user ? (
-              <Button size="lg" asChild className="bg-hero shadow-glow"><Link to="/dashboard">Go to Dashboard</Link></Button>
+              <Button size="lg" asChild className="bg-hero shadow-glow">
+                <Link to="/dashboard">Go to Dashboard</Link>
+              </Button>
             ) : (
               <>
-                <Button size="lg" asChild className="bg-hero shadow-glow"><Link to="/auth">Get Started Free</Link></Button>
-                <Button size="lg" variant="outline" asChild><Link to="/auth">Sign In</Link></Button>
+                <Button size="lg" asChild className="bg-hero shadow-glow">
+                  <Link to="/auth">Get Started Free</Link>
+                </Button>
+                <Button size="lg" variant="outline" asChild>
+                  <Link to="/auth">Sign In</Link>
+                </Button>
               </>
             )}
           </div>
@@ -55,12 +73,36 @@ function Index() {
 
         <section className="container mx-auto px-4 pb-24 grid md:grid-cols-3 gap-6">
           {[
-            { icon: Brain, title: "AI Mentor", desc: "Ask Gemini to explain any question — strengths and weaknesses analyzed automatically." },
-            { icon: Timer, title: "Realistic CBT", desc: "Timer, flag, navigate, and submit just like the real exam. 80% completion guard built-in." },
-            { icon: Trophy, title: "Leaderboards", desc: "Climb the weekly Top 10. Earn trophies, stars, and badges as you grow." },
-            { icon: ShieldCheck, title: "Three Tiers", desc: "Novice (free), Erudite, Scholar — choose what fits your study load." },
-            { icon: GraduationCap, title: "Topic Insights", desc: "See your strongest and weakest topics so you study smarter." },
-            { icon: Sparkles, title: "Built for Nigeria", desc: "Pay easily via Opay; manual verification by our team." },
+            {
+              icon: Brain,
+              title: "AI Mentor",
+              desc: "After a test, ask the AI to explain a question, simplify it or show why you were wrong.",
+            },
+            {
+              icon: Timer,
+              title: "Realistic CBT",
+              desc: "Timer, flag, navigate, and submit just like the real exam. Every test is scored on the server.",
+            },
+            {
+              icon: Trophy,
+              title: "Leaderboards",
+              desc: "Climb the daily leaderboard. Earn XP, levels and achievements as you grow.",
+            },
+            {
+              icon: ShieldCheck,
+              title: "Three Tiers",
+              desc: "Novice (free), Erudite, Scholar — choose what fits your study load.",
+            },
+            {
+              icon: GraduationCap,
+              title: "Topic Insights",
+              desc: "See your strongest and weakest topics so you study smarter.",
+            },
+            {
+              icon: Sparkles,
+              title: "Built for Nigeria",
+              desc: "Pay in naira by card through Paystack; your plan starts once the payment is verified.",
+            },
           ].map((f) => (
             <Card key={f.title} className="p-6 bg-card-soft shadow-soft border-border/60">
               <div className="h-10 w-10 rounded-lg bg-accent flex items-center justify-center mb-4">

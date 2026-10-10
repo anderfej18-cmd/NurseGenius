@@ -1,1 +1,11 @@
 project_id = "csfvyiunxqtjlxvbbwfl"
+
+# ask-ai also checks the caller itself (ADR-0006). verify_jwt only proves a request carries *a*
+# Supabase key, and the anon key is public, so it is a floor, not the access control.
+[functions.ask-ai]
+verify_jwt = true
+
+# ai-insight is called only by the Worker, with the service-role key, which the function checks itself
+# (ADR-0011). verify_jwt stays on as a floor.
+[functions.ai-insight]
+verify_jwt = true

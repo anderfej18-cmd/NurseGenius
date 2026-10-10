@@ -1,54 +1,110 @@
-import "https://deno.land/x/xhr@0.1.0/mod.ts";
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "@supabase/supabase-js";
+import { z } from "zod";
+import { GatewayError, handleAskAi, type AskAiDeps } from "./handler.ts";
+import {
+  AI_CONFIG,
+  explainableQuestionSchema,
+  explanationFromGateway,
+  parseAllowedOrigins,
+  type Prompt,
+} from "./policy.ts";
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+// Wiring only: every decision lives in handler.ts and policy.ts, which are tested without Deno
+// (ADR-0006). Secrets come from the Edge Function environment and are never logged.
+const url = requiredEnv("SUPABASE_URL");
+const anonKey = requiredEnv("SUPABASE_ANON_KEY");
+const gatewayKey = requiredEnv("LOVABLE_API_KEY");
+const admin = createClient(url, requiredEnv("SUPABASE_SERVICE_ROLE_KEY"), {
+  auth: { persistSession: false, autoRefreshToken: false },
+});
+
+const limitRowSchema = z.object({ allowed: z.boolean(), retry_after_seconds: z.number() });
+
+const deps: AskAiDeps = {
+  allowedOrigins: parseAllowedOrigins(Deno.env.get("ALLOWED_ORIGINS")),
+
+  async verifyUser(authorization) {
+    const token = authorization?.startsWith("Bearer ") ? authorization.slice(7).trim() : "";
+    if (token === "") return null;
+    const client = createClient(url, anonKey, { auth: { persistSession: false } });
+    const { data, error } = await client.auth.getUser(token);
+    return error || !data.user ? null : data.user.id;
+  },
+
+  async loadExamQuestion(userId, examId, questionId) {
+    const { data, error } = await admin.rpc("get_explainable_question", {
+      _user_id: userId,
+      _exam_id: examId,
+      _question_id: questionId,
+    });
+    if (error) throw error;
+    return firstQuestion(data);
+  },
+
+  async loadSharedQuestion(attemptId, accessHash, questionId) {
+    const { data, error } = await admin.rpc("get_explainable_shared_question", {
+      _attempt_id: attemptId,
+      _access_hash: accessHash,
+      _question_id: questionId,
+    });
+    if (error) throw error;
+    return firstQuestion(data);
+  },
+
+  async consume(bucket, limit, windowSeconds) {
+    const { data, error } = await admin.rpc("consume_rate_limit", {
+      _bucket: bucket,
+      _limit: limit,
+      _window_seconds: windowSeconds,
+    });
+    if (error) throw error;
+    const [row] = z.array(limitRowSchema).min(1).parse(data);
+    return { allowed: row.allowed, retryAfterSeconds: row.retry_after_seconds };
+  },
+
+  explain: callGateway,
+
+  log(message, error) {
+    console.error(message, error instanceof Error ? error.message : error);
+  },
 };
 
-serve(async (req) => {
-  if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
+Deno.serve((request) => handleAskAi(request, deps));
+
+function firstQuestion(rows: unknown) {
+  const [row] = z.array(explainableQuestionSchema).parse(rows);
+  return row ?? null;
+}
+
+async function callGateway(prompt: Prompt): Promise<string> {
+  let response: Response;
   try {
-    const { question, options, correct, topic } = await req.json();
-    const KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!KEY) throw new Error("LOVABLE_API_KEY not configured");
-
-    const prompt = `You are a friendly nursing tutor. Explain this question clearly and concisely (3-6 sentences).
-
-Topic: ${topic}
-Question: ${question}
-Options:
-A. ${options.A}
-B. ${options.B}
-C. ${options.C}
-D. ${options.D}
-Correct answer: ${correct}
-
-Explain why ${correct} is correct and briefly why the others are wrong. Use plain language a nursing student would understand.`;
-
-    const r = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
-      headers: { Authorization: `Bearer ${KEY}`, "Content-Type": "application/json" },
+      headers: { Authorization: `Bearer ${gatewayKey}`, "Content-Type": "application/json" },
       body: JSON.stringify({
-        model: "google/gemini-3-flash-preview",
-        messages: [{ role: "user", content: prompt }],
+        model: AI_CONFIG.model,
+        max_tokens: AI_CONFIG.maxOutputTokens,
+        messages: [
+          { role: "system", content: prompt.system },
+          { role: "user", content: prompt.user },
+        ],
       }),
+      signal: AbortSignal.timeout(AI_CONFIG.gatewayTimeoutMs),
     });
-
-    if (!r.ok) {
-      if (r.status === 429) return new Response(JSON.stringify({ error: "Rate limit, try again shortly." }), { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } });
-      if (r.status === 402) return new Response(JSON.stringify({ error: "AI credits exhausted." }), { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } });
-      const t = await r.text();
-      console.error("AI error", r.status, t);
-      throw new Error("AI gateway error");
-    }
-    const data = await r.json();
-    const explanation = data.choices?.[0]?.message?.content ?? "No response.";
-    return new Response(JSON.stringify({ explanation }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
-  } catch (e) {
-    console.error(e);
-    return new Response(JSON.stringify({ error: e instanceof Error ? e.message : "Unknown error" }), {
-      status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+  } catch (error) {
+    throw new GatewayError("gateway unreachable", 502, String(error));
   }
-});
+  if (!response.ok) {
+    throw new GatewayError("gateway refused", response.status, await response.text());
+  }
+  const explanation = explanationFromGateway(await response.json());
+  if (explanation === null) throw new GatewayError("empty answer", 502, "no usable text");
+  return explanation;
+}
+
+function requiredEnv(name: string): string {
+  const value = Deno.env.get(name);
+  if (!value) throw new Error(`Missing environment variable: ${name}`);
+  return value;
+}

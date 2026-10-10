@@ -8,15 +8,23 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { loadPaystack, PAYSTACK_PUBLIC_KEY } from "@/lib/paystack";
+import { planPerks } from "@/lib/plan-view";
 
 export const Route = createFileRoute("/payments")({
   component: Payments,
   head: () => ({
     meta: [
       { title: "Upgrade Your Plan — NurseGenius" },
-      { name: "description", content: "Upgrade to Erudite or Scholar with secure Paystack checkout and unlock more daily RN & RM practice questions." },
+      {
+        name: "description",
+        content:
+          "Upgrade to Erudite or Scholar with secure Paystack checkout and unlock more daily RN & RM practice questions.",
+      },
       { property: "og:title", content: "Upgrade Your Plan — NurseGenius" },
-      { property: "og:description", content: "Secure Paystack checkout for Erudite and Scholar access on NurseGenius." },
+      {
+        property: "og:description",
+        content: "Secure Paystack checkout for Erudite and Scholar access on NurseGenius.",
+      },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
     ],
@@ -32,13 +40,12 @@ interface Plan {
 }
 
 interface PaymentRow {
-  id: string; plan_name: string; amount_ngn: number; duration_days: number; created_at: string;
+  id: string;
+  plan_name: string;
+  amount_ngn: number;
+  duration_days: number;
+  created_at: string;
 }
-
-const PERKS: Record<string, string> = {
-  erudite: "500 questions/day • 150 per session • Full AI explanations",
-  scholar: "Unlimited daily questions • 250 per session • Full AI explanations",
-};
 
 function Payments() {
   const { user, profile, loading, refresh } = useAuth();
@@ -47,20 +54,26 @@ function Payments() {
   const [history, setHistory] = useState<PaymentRow[]>([]);
   const [busy, setBusy] = useState<string | null>(null);
 
-  useEffect(() => { if (!loading && !user) navigate({ to: "/auth" }); }, [loading, user, navigate]);
+  useEffect(() => {
+    if (!loading && !user) navigate({ to: "/auth" });
+  }, [loading, user, navigate]);
 
   const loadHistory = async (uid: string) => {
-    const { data } = await supabase.from("subscription_payments")
+    const { data } = await supabase
+      .from("subscription_payments")
       .select("id, plan_name, amount_ngn, duration_days, created_at")
-      .eq("user_id", uid).order("created_at", { ascending: false });
+      .eq("user_id", uid)
+      .order("created_at", { ascending: false });
     setHistory((data as PaymentRow[]) ?? []);
   };
 
   useEffect(() => {
     (async () => {
-      const { data } = await supabase.from("plans")
+      const { data } = await supabase
+        .from("plans")
         .select("id, name, price_ngn, duration_days, is_active")
-        .eq("is_active", true).order("price_ngn");
+        .eq("is_active", true)
+        .order("price_ngn");
       setPlans((data as Plan[]) ?? []);
       if (user) await loadHistory(user.id);
     })();
@@ -85,26 +98,42 @@ function Payments() {
             try {
               const { data: sessionData } = await supabase.auth.getSession();
               const accessToken = sessionData.session?.access_token;
-              if (!accessToken) throw new Error("Payment received. Sign in again to activate your plan.");
+              if (!accessToken)
+                throw new Error("Payment received. Sign in again to activate your plan.");
               const response = await fetch("/api/public/paystack-verify", {
                 method: "POST",
-                headers: { "content-type": "application/json", authorization: `Bearer ${accessToken}` },
+                headers: {
+                  "content-type": "application/json",
+                  authorization: `Bearer ${accessToken}`,
+                },
                 body: JSON.stringify({ reference: res.reference }),
               });
-              const result = await response.json() as { ok?: boolean; tier?: string; expiresAt?: string; error?: string };
-              if (!response.ok || !result.ok) throw new Error(result.error ?? "Payment received but plan activation failed.");
+              const result = (await response.json()) as {
+                ok?: boolean;
+                tier?: string;
+                expiresAt?: string;
+                error?: string;
+              };
+              if (!response.ok || !result.ok)
+                throw new Error(result.error ?? "Payment received but plan activation failed.");
               const until = result.expiresAt ? new Date(result.expiresAt).toLocaleDateString() : "";
               toast.success(`You're now ${plan.name}! Access until ${until}`);
               await refresh();
               await loadHistory(user.id);
             } catch (error) {
-              toast.error(error instanceof Error ? `Payment received but activation failed: ${error.message}` : "Payment received but activation failed. Please contact support.");
+              toast.error(
+                error instanceof Error
+                  ? `Payment received but activation failed: ${error.message}`
+                  : "Payment received but activation failed. Please contact support.",
+              );
             } finally {
               setBusy(null);
             }
           })();
         },
-        onClose: () => { setBusy(null); },
+        onClose: () => {
+          setBusy(null);
+        },
       });
       handler.openIframe();
     } catch (e) {
@@ -113,7 +142,13 @@ function Payments() {
     }
   };
 
-  if (!plans) return <><AppHeader /><div className="p-12 text-center">Loading…</div></>;
+  if (!plans)
+    return (
+      <>
+        <AppHeader />
+        <div className="p-12 text-center">Loading…</div>
+      </>
+    );
 
   return (
     <>
@@ -131,22 +166,29 @@ function Payments() {
             <p className="text-xs uppercase opacity-80">Current plan</p>
             <p className="text-2xl font-bold capitalize">{profile.tier}</p>
             {profile.expiry_date && (
-              <p className="text-sm opacity-90">Expires {new Date(profile.expiry_date).toLocaleDateString()}</p>
+              <p className="text-sm opacity-90">
+                Expires {new Date(profile.expiry_date).toLocaleDateString()}
+              </p>
             )}
           </Card>
         )}
 
         <div className="grid md:grid-cols-2 gap-4">
-          {plans.map(p => (
+          {plans.map((p) => (
             <Card key={p.id} className="p-6 flex flex-col gap-3">
               <div>
                 <p className="text-xs uppercase text-muted-foreground tracking-wide">{p.name}</p>
                 <p className="text-3xl font-bold mt-1">
                   ₦{Number(p.price_ngn).toLocaleString()}
-                  <span className="text-base font-normal text-muted-foreground"> / {p.duration_days} days</span>
+                  <span className="text-base font-normal text-muted-foreground">
+                    {" "}
+                    / {p.duration_days} days
+                  </span>
                 </p>
               </div>
-              <p className="text-sm text-muted-foreground flex-1">{PERKS[p.name] ?? `${p.duration_days} days of full access`}</p>
+              <p className="text-sm text-muted-foreground flex-1">
+                {planPerks(p.name, p.duration_days)}
+              </p>
               <Button className="bg-hero w-full" disabled={busy === p.id} onClick={() => pay(p)}>
                 {busy === p.id ? "Opening Paystack…" : "Pay with Paystack"}
               </Button>
@@ -163,10 +205,12 @@ function Payments() {
           <Card className="p-5">
             <h2 className="font-semibold mb-3">Your Payments</h2>
             <div className="divide-y">
-              {history.map(h => (
+              {history.map((h) => (
                 <div key={h.id} className="flex justify-between items-center py-2 text-sm">
                   <div>
-                    <p className="font-medium capitalize">{h.plan_name} — ₦{Number(h.amount_ngn).toLocaleString()}</p>
+                    <p className="font-medium capitalize">
+                      {h.plan_name} — ₦{Number(h.amount_ngn).toLocaleString()}
+                    </p>
                     <p className="text-xs text-muted-foreground">
                       {h.duration_days} days · {new Date(h.created_at).toLocaleString()}
                     </p>
@@ -181,8 +225,14 @@ function Payments() {
         <Card className="p-5 text-sm">
           <p className="font-semibold mb-1">Need help?</p>
           <p className="text-muted-foreground">
-            Telegram: <a href="https://t.me/nursegenius" className="text-primary underline">@nursegenius</a> ·
-            Email: <a href="mailto:nursegenius3@gmail.com" className="text-primary underline">nursegenius3@gmail.com</a>
+            Telegram:{" "}
+            <a href="https://t.me/nursegenius" className="text-primary underline">
+              @nursegenius
+            </a>{" "}
+            · Email:{" "}
+            <a href="mailto:nursegenius3@gmail.com" className="text-primary underline">
+              nursegenius3@gmail.com
+            </a>
           </p>
         </Card>
       </main>
