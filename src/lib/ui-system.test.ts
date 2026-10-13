@@ -26,12 +26,6 @@ const interfaceFiles = [...walk(join(src, "components")), ...walk(join(src, "rou
 const read = (file: string): string => readFileSync(file, "utf8");
 const where = (file: string): string => relative(root, file);
 
-/**
- * Files allowed to name raw colours. chart.tsx holds selectors that match Recharts' own default stroke
- * values ([stroke='#ccc']) so they can be overridden with tokens; it draws nothing with them.
- */
-const RAW_COLOUR_EXCEPTIONS = [join("components", "ui", "chart.tsx")];
-
 /** Every file whose text matches the pattern, as "path:line". */
 function findAll(pattern: RegExp, skip: readonly string[] = []): string[] {
   const hits: string[] = [];
@@ -117,9 +111,7 @@ describe("the design system holds across the interface", () => {
   });
 
   it("uses semantic tokens only: no hex, rgb, hsl or oklch literals", () => {
-    expect(
-      findAll(/#[0-9a-fA-F]{3,8}\b|\brgba?\(|\bhsla?\(|\boklch\(/, RAW_COLOUR_EXCEPTIONS),
-    ).toEqual([]);
+    expect(findAll(/#[0-9a-fA-F]{3,8}\b|\brgba?\(|\bhsla?\(|\boklch\(/)).toEqual([]);
   });
 
   it("uses no Tailwind palette colours (bg-red-500 and the like)", () => {

@@ -23,8 +23,12 @@ This project uses TanStack Start, React, TypeScript, and Vite.
 
 Useful checks:
 
-- `bun run build` — production build.
+- `bun run test` — unit tests, and every migration replayed on PGlite.
 - `bun run lint` — lint the project.
+- `bun run typecheck` — TypeScript.
+- `bun run build` — production build.
+
+Where to read next: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) (layers and rules), [docs/ROUTE_MAP.md](docs/ROUTE_MAP.md) (every page), [docs/FEATURE_INVENTORY.md](docs/FEATURE_INVENTORY.md) (what works), [docs/deployment.md](docs/deployment.md) (migrations and Edge Functions, in order), [docs/design/DESIGN.md](docs/design/DESIGN.md) (design system).
 
 ## Configuration
 
@@ -34,13 +38,13 @@ Paystack checkout requires the browser publishable key `VITE_PAYSTACK_PUBLIC_KEY
 
 The AI question explanations use the app's configured AI service. Database migrations are stored in `supabase/migrations/`.
 
-## Shared tests
+## Live tests (shared tests)
 
-Admins can create a test from selected question-bank areas or upload a TXT question file. Uploaded questions remain separate from the main question bank until an admin explicitly imports them. Tests support up to 250 questions, a 10–180 minute duration, and an expiry date. Each published test has a private share link.
+Admins build a test by drawing a random set from chosen question-bank topics, or from an uploaded TXT file whose questions stay separate from the main bank until an admin imports them. A test has a start time, an expiry time, a 10–180 minute duration and up to 250 questions. The clock is the database's, so a candidate cannot extend an attempt. Anyone with the link can take it, with their email; rankings are shown once the link closes, and a finished attempt can be linked to an account. See [docs/live-tests-integration.md](docs/live-tests-integration.md).
 
 ## Security
 
 - Keep private keys and local environment files out of source control.
 - Administrative operations are protected by server-side role checks and database access policies.
 - Payment plans are activated only after server-side confirmation with Paystack.
-- Public test links contain unguessable tokens; the database stores token hashes.
+- Public test links contain unguessable tokens. The database stores a hash of each token to look a test up, and the admin's own copy of the link so it can be shown again; sub-admins cannot read student exams, payments or attempts.
