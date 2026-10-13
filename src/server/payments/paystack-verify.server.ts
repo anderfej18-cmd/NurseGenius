@@ -55,7 +55,16 @@ const failure = (status: number, error: string) => Response.json({ error }, { st
 
 /** Route entry (the route file path is fixed by the router). Loaded by a dynamic import, never in the client bundle. */
 export async function verifyPaystackPayment(request: Request): Promise<Response> {
-  return handlePaymentVerification(request, await defaultDeps());
+  let deps: PaymentVerificationDeps;
+  try {
+    deps = await defaultDeps();
+  } catch (error) {
+    // A missing server setting must still answer in JSON: the payment page reads the body, and an
+    // HTML error page would hide the reason behind a parse error.
+    const typed: AppError = toAppError(error);
+    return failure(typed.statusCode, typed.message);
+  }
+  return handlePaymentVerification(request, deps);
 }
 
 async function defaultDeps(): Promise<PaymentVerificationDeps> {

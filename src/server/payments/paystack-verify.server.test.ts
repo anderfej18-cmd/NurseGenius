@@ -1,6 +1,10 @@
 import { describe, expect, it, vi } from "vitest";
 import { ConflictError, ForbiddenError } from "../errors";
-import { type PaymentVerificationDeps, handlePaymentVerification } from "./paystack-verify.server";
+import {
+  type PaymentVerificationDeps,
+  handlePaymentVerification,
+  verifyPaystackPayment,
+} from "./paystack-verify.server";
 
 const post = (body: unknown, headers: Record<string, string> = { authorization: "Bearer token" }) =>
   new Request("https://app.example/api/public/paystack-verify", {
@@ -97,5 +101,20 @@ describe("handlePaymentVerification", () => {
     expect(text).not.toMatch(/duplicate|hunter2|pkey/);
     expect(errors).toHaveBeenCalled();
     errors.mockRestore();
+  });
+});
+
+describe("verifyPaystackPayment: a server that is not configured", () => {
+  it("answers 500 in JSON naming no setting and no value, so the payment page can read it", async () => {
+    // Without the Paystack secret the route used to throw before it could answer, and the visitor got
+    // an HTML error page that the browser could not parse.
+    vi.stubEnv("PAYSTACK_SECRET_KEY", "");
+    const errors = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    const response = await verifyPaystackPayment(post({ reference: "ref-12345" }));
+    expect(response.status).toBe(500);
+    expect(response.headers.get("content-type")).toMatch(/application\/json/);
+    expect(await json(response)).toEqual({ error: "Server is not configured." });
+    errors.mockRestore();
+    vi.unstubAllEnvs();
   });
 });

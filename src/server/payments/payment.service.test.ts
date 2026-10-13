@@ -75,6 +75,12 @@ describe("PaymentService.verify: refusals, none of which may activate anything",
   it.each([
     ["the provider does not know the reference", null, 402],
     ["the payment did not succeed", payment({ status: "failed" }), 402],
+    ["the customer closed checkout (abandoned)", payment({ status: "abandoned" }), 402],
+    ["the payment is still pending", payment({ status: "pending" }), 402],
+    ["the payment is still ongoing", payment({ status: "ongoing" }), 402],
+    ["the payment was queued", payment({ status: "queued" }), 402],
+    ["the payment was reversed", payment({ status: "reversed" }), 402],
+    ["the status is missing", payment({ status: "" }), 402],
     ["the provider answers for a different reference", payment({ reference: "other-ref" }), 402],
     ["the payment was made by another account", payment({ metadataUserId: "someone-else" }), 403],
     ["the payment has no account in its metadata", payment({ metadataUserId: undefined }), 403],
@@ -122,6 +128,20 @@ describe("PaymentService.verify: replay and failure", () => {
       },
     });
     await expect(run(s)).rejects.toBe(boom);
+  });
+
+  it("answers a duplicate callback for the same payment with the same expiry, asking the database each time", async () => {
+    const s = setup(payment(), { activate: async () => EXPIRY });
+    const first = await run(s);
+    const second = await run(s);
+    expect(second).toEqual(first);
+    expect(s.activator.activate).toHaveBeenCalledTimes(2);
+    expect(s.activator.activate).toHaveBeenNthCalledWith(2, {
+      userId: "user-1",
+      tier: "erudite",
+      reference: "ref-12345",
+      amountNaira: 1500,
+    });
   });
 
   it("asks the provider only for the reference it was given, once", async () => {

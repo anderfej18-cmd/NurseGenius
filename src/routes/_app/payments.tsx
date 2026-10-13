@@ -114,7 +114,8 @@ function Payments() {
                 },
                 body: JSON.stringify({ reference: res.reference }),
               });
-              const result = (await response.json()) as {
+              // An answer that is not JSON (a platform error page) falls back to the plain message below.
+              const result = (await response.json().catch(() => ({}))) as {
                 ok?: boolean;
                 tier?: string;
                 expiresAt?: string;

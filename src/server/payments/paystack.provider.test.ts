@@ -40,6 +40,46 @@ describe("PaystackProvider.verify", () => {
     });
   });
 
+  it("reads a full Paystack answer: extra fields ignored, metadata kept, the outcome passed on as given", async () => {
+    const full = {
+      status: true,
+      message: "Verification successful",
+      data: {
+        id: 1,
+        domain: "live",
+        status: "abandoned",
+        reference: "ref-2",
+        amount: 200000,
+        gateway_response: "The transaction was not completed",
+        channel: "card",
+        currency: "NGN",
+        plan: null,
+        fees_split: null,
+        customer: { id: 9, email: "Student@Example.com", metadata: null },
+        metadata: {
+          user_id: "u2",
+          plan: "scholar",
+          duration_days: 30,
+          referrer: "https://app.test/",
+        },
+      },
+    };
+    const result = await new PaystackProvider({
+      secretKey: SECRET,
+      fetcher: async () => ok(full),
+      timeoutMs: 5000,
+    }).verify("ref-2");
+    expect(result).toEqual({
+      status: "abandoned",
+      reference: "ref-2",
+      amountKobo: 200000,
+      currency: "NGN",
+      customerEmail: "Student@Example.com",
+      metadataUserId: "u2",
+      metadataPlan: "scholar",
+    });
+  });
+
   it("returns null when Paystack says the transaction is not successful or unknown", async () => {
     const provider = (response: Response) =>
       new PaystackProvider({ secretKey: SECRET, fetcher: async () => response, timeoutMs: 5000 });
