@@ -4,6 +4,7 @@ Source: `src/functions/mistakes.functions.ts` → `src/server/mistakes/`. Data: 
 (one row per student and question, updated when a session is submitted). No question is copied.
 
 ## listMistakes
+
 - **Authorization**: signed-in student; returns only the caller's mistakes
 - **Request**: `{ view?: "all"|"most_repeated"|"recent"|"repeatedly_failed" (default all), examType?, topic?, limit?: 1–50, offset?: 0–10,000 }`
 - **Response**: `{ items: [{ questionId, examType, topic, misses, attempts, correct, lastMissedAt, lastAnswer, unresolved, answerWithheld, question: { question_text, option_a..d, correct_answer|null, rationale|null } }], nextOffset: number|null }`

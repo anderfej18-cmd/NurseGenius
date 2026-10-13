@@ -24,12 +24,12 @@ Accepted
 
 **Chosen option**: 2.
 
-| Module | Seam | Reason |
-|---|---|---|
-| `ReviewScheduler` | interface, `Sm2ReviewScheduler` is the only implementation | explicit requirement; the algorithm is expected to change |
-| `RecommendationStrategy` | interface, `DeterministicRecommendationStrategy` is the only implementation | explicit requirement; the AI seam |
-| Mastery, confidence, time analytics, adaptive scoring, similar-question ranking, readiness | none: pure functions/classes taking a typed config | tuned by configuration, not replaced |
-| Services that need data | a narrow dependency type declared next to the consumer; tests pass plain fakes, or run on PGlite where SQL matters | concrete dependencies by default |
+| Module                                                                                     | Seam                                                                                                               | Reason                                                    |
+| ------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------- |
+| `ReviewScheduler`                                                                          | interface, `Sm2ReviewScheduler` is the only implementation                                                         | explicit requirement; the algorithm is expected to change |
+| `RecommendationStrategy`                                                                   | interface, `DeterministicRecommendationStrategy` is the only implementation                                        | explicit requirement; the AI seam                         |
+| Mastery, confidence, time analytics, adaptive scoring, similar-question ranking, readiness | none: pure functions/classes taking a typed config                                                                 | tuned by configuration, not replaced                      |
+| Services that need data                                                                    | a narrow dependency type declared next to the consumer; tests pass plain fakes, or run on PGlite where SQL matters | concrete dependencies by default                          |
 
 There is no `FakeAIRecommendationStrategy`: the interface is the seam, nothing more.
 

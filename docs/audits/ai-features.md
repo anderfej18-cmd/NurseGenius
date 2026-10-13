@@ -6,29 +6,29 @@ Cloudflare Worker, browser or AI provider was used, and no migration was applied
 
 ## Verification (this run)
 
-| Check | Result |
-|---|---|
-| `bun run test` | exit 0: 148 files, 2,003 tests passed, 0 failed |
-| `bun run lint` | exit 0: 0 errors, 11 warnings (pre-existing style) |
-| `bun run typecheck` | exit 0 |
-| `bun run build` | exit 0 |
-| Dependency-boundary check | PASS |
-| `scan_repo.py` | no markers; every area has tests |
-| Architecture validator | 0 errors, 19 warnings (files over 300 lines, e.g. `performance.ts` 369) |
+| Check                        | Result                                                                                                                                                                                                                                                                                                                       |
+| ---------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `bun run test`               | exit 0: 148 files, 2,003 tests passed, 0 failed                                                                                                                                                                                                                                                                              |
+| `bun run lint`               | exit 0: 0 errors, 11 warnings (pre-existing style)                                                                                                                                                                                                                                                                           |
+| `bun run typecheck`          | exit 0                                                                                                                                                                                                                                                                                                                       |
+| `bun run build`              | exit 0                                                                                                                                                                                                                                                                                                                       |
+| Dependency-boundary check    | PASS                                                                                                                                                                                                                                                                                                                         |
+| `scan_repo.py`               | no markers; every area has tests                                                                                                                                                                                                                                                                                             |
+| Architecture validator       | 0 errors, 19 warnings (files over 300 lines, e.g. `performance.ts` 369)                                                                                                                                                                                                                                                      |
 | Security scanner (`scan.js`) | 31 findings (19 critical, 12 high). The new ones are heuristic matches on words such as "generate"/"narrate" in Worker code that makes no model call (the call is in the Edge Function, which has `max_tokens`, a timeout, authentication and limits); the browser wrapper `src/lib/ask-ai.ts` is the same finding as before |
-| Client-bundle grep | none of: service-role key name, Paystack secret, `LOVABLE_API_KEY`, gateway address, the new RPC/table names |
+| Client-bundle grep           | none of: service-role key name, Paystack secret, `LOVABLE_API_KEY`, gateway address, the new RPC/table names                                                                                                                                                                                                                 |
 
 ## What exists for each feature
 
-| # | Feature | Status | Where AI is used | Where it is deliberately not |
-|---|---|---|---|---|
-| 1 | Study recommendations | Implemented locally | Plain-words explanation of the day's plan (`InsightCard`, kind `recommendation`) | The plan itself (`DeterministicRecommendationStrategy`); "Practise this" links preset topic and selection |
-| 2 | Adaptive learning | Implemented locally | none | Scoring and ranking stay deterministic; each question stores *why* it was chosen and the results page shows it |
-| 3 | Exam readiness | Implemented locally | Explanation (kind `readiness`) | The estimate; assessments are kept (`readiness_snapshots`) with time and change |
-| 4 | Study plans | Implemented locally | Explanation (kind `plan`) | The schedule; edit exam date, update keeps earlier weeks, reasons per item, "Practise" links |
-| 5 | Question assistance | Implemented locally | `ask-ai`: explain, simplify, compare options, why wrong, follow-up | Reveal rules (SQL), eligibility, rate limits |
-| 6 | Performance analysis | Implemented locally | Explanation (kind `performance`) | All figures (`analyzePerformance`) |
-| 7 | Similar questions | Implemented locally | none | Ranking by metadata + wording overlap; "Practise these" starts a server-chosen session |
+| #   | Feature               | Status              | Where AI is used                                                                 | Where it is deliberately not                                                                                   |
+| --- | --------------------- | ------------------- | -------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------- |
+| 1   | Study recommendations | Implemented locally | Plain-words explanation of the day's plan (`InsightCard`, kind `recommendation`) | The plan itself (`DeterministicRecommendationStrategy`); "Practise this" links preset topic and selection      |
+| 2   | Adaptive learning     | Implemented locally | none                                                                             | Scoring and ranking stay deterministic; each question stores _why_ it was chosen and the results page shows it |
+| 3   | Exam readiness        | Implemented locally | Explanation (kind `readiness`)                                                   | The estimate; assessments are kept (`readiness_snapshots`) with time and change                                |
+| 4   | Study plans           | Implemented locally | Explanation (kind `plan`)                                                        | The schedule; edit exam date, update keeps earlier weeks, reasons per item, "Practise" links                   |
+| 5   | Question assistance   | Implemented locally | `ask-ai`: explain, simplify, compare options, why wrong, follow-up               | Reveal rules (SQL), eligibility, rate limits                                                                   |
+| 6   | Performance analysis  | Implemented locally | Explanation (kind `performance`)                                                 | All figures (`analyzePerformance`)                                                                             |
+| 7   | Similar questions     | Implemented locally | none                                                                             | Ranking by metadata + wording overlap; "Practise these" starts a server-chosen session                         |
 
 "Implemented locally" means the code, schema, tests and screens exist and pass; it is not verified live.
 

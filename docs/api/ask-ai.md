@@ -9,10 +9,10 @@ It is **not** a TanStack server function, because the gateway key lives in the E
 
 `POST`, JSON, at most 2 KB, strict (any other field is refused with 400).
 
-| `kind` | Body | Who may call |
-|---|---|---|
-| `exam` | `{ kind: "exam", examId: uuid, questionId: uuid, intent?, followUp? }` | A signed-in student, for a question of their **own finished** exam. The bearer token is verified with `auth.getUser()`; the public anon key is not a student and gets 401. |
-| `shared` | `{ kind: "shared", attemptId: uuid, accessKey: string (32–256), questionId: uuid, intent?, followUp? }` | A shared-test taker holding the attempt key, for a question of their **finished** attempt. The function hashes the key (SHA-256) and the database checks it. |
+| `kind`   | Body                                                                                                    | Who may call                                                                                                                                                               |
+| -------- | ------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `exam`   | `{ kind: "exam", examId: uuid, questionId: uuid, intent?, followUp? }`                                  | A signed-in student, for a question of their **own finished** exam. The bearer token is verified with `auth.getUser()`; the public anon key is not a student and gets 401. |
+| `shared` | `{ kind: "shared", attemptId: uuid, accessKey: string (32–256), questionId: uuid, intent?, followUp? }` | A shared-test taker holding the attempt key, for a question of their **finished** attempt. The function hashes the key (SHA-256) and the database checks it.               |
 
 The client never sends question text, options, the correct answer or a topic. They are read from the database by
 `get_explainable_question` / `get_explainable_shared_question`, so a caller cannot make the model explain a made-up
@@ -20,10 +20,10 @@ question or "teach" it a false correct answer, and a question cannot be explaine
 
 ## Kinds of help
 
-| Field | Values |
-|---|---|
-| `intent` (default `explain`) | `explain`, `simplify`, `compare_options`, `why_wrong` |
-| `followUp` | a short question of the student's own, 3–300 characters |
+| Field                        | Values                                                  |
+| ---------------------------- | ------------------------------------------------------- |
+| `intent` (default `explain`) | `explain`, `simplify`, `compare_options`, `why_wrong`   |
+| `followUp`                   | a short question of the student's own, 3–300 characters |
 
 `why_wrong` is refused with 400 `That kind of help does not apply to this question.` for a question answered correctly or not at all. The prompt carries the stored question, the stored key, the **official rationale** (or says none exists, and the model is told not to invent one) and the student's own answer. The follow-up is wrapped as data. Help works only on a **finished** test, as before; no mode allows a hint during a test. Answers that contain a link are discarded. The screen (`QuestionHelp`) shows the official explanation when the AI cannot answer.
 
@@ -36,13 +36,13 @@ Database and gateway error text is logged on the server only.
 
 ## Limits (`AI_CONFIG` in `policy.ts`)
 
-| Scope | Limit |
-|---|---|
-| Student, burst | 5 per minute |
-| Student, daily | 30 per day |
-| Shared-test attempt | 10 per day |
-| Caller address (`cf-connecting-ip`) | 20 per minute |
-| Model output | 400 tokens; gateway wait 20 s |
+| Scope                               | Limit                         |
+| ----------------------------------- | ----------------------------- |
+| Student, burst                      | 5 per minute                  |
+| Student, daily                      | 30 per day                    |
+| Shared-test attempt                 | 10 per day                    |
+| Caller address (`cf-connecting-ip`) | 20 per minute                 |
+| Model output                        | 400 tokens; gateway wait 20 s |
 
 ## CORS
 

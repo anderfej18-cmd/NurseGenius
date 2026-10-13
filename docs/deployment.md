@@ -17,28 +17,30 @@ an instruction to check, not a result. The migrations replay cleanly on PGlite (
 
 Apply in file-name order. Each file is one transaction; stop at the first error and read it.
 
-| # | File | What it does |
-|---|---|---|
-| 1 | `20261006200000_question_catalog_and_profile_lockdown` | Hides the answer key from students; students can no longer write `tier` or other protected profile fields |
-| 2 | `20261006200100_exam_session_engine` | Server-side sessions and scoring; students lose write access to `exams` and `exam_answers`; backfills statistics; finishes abandoned sessions |
-| 3 | `…200200_bookmarks_and_question_reports` | Bookmarks and reports |
-| 4 | `…200300_intelligence_support` | Review scheduling support |
-| 5 | `…200400_study_days` | Streak days |
-| 6 | `…200500_gamification` | XP ledger and achievements |
-| 7 | `…200600_daily_challenges` | Daily challenge |
-| 8 | `…200700_study_plans` | Study plans |
-| 9 | `…200800_friends` | Friends |
-| 10 | `…200900_friend_challenges` | Friend challenges |
-| 11 | `…201000_notifications` | Notification outbox and inbox |
-| 12 | `…201100_admin_content_management` | Admins can no longer write `questions` or `subtopics` from the browser |
-| 13 | `20261009100000_rate_limits_and_ai_access` | Database rate limiter; `ask-ai` access functions |
-| 14 | `20261009100100_admin_access_and_directories` | Tier grants for central admins only; leaderboard and directory for the server only |
-| 15 | `20261009100200_custom_tests_service_rpcs` | Shared tests through the server only |
-| 16 | `20261009100300_hints_used` | `exam_answers.hints_used` and the nine-argument `save_exam_answer` |
-| 17 | `20261009100400_score_integrity` | `exams.score_verified`, backfill, verified-only leaderboards |
-| 18 | `20261009100500_quota_enforcement` | Tier limits enforced inside `start_exam_session` |
-| 19 | `20261009100600_ai_insights` | `ai_insights` (stored AI explanations) and `readiness_snapshots` with `record_readiness_snapshot`; both service-role only |
-| 20 | `20261009100700_selection_reasons` | `exam_answers.selection_reason` and `record_selection_reasons` |
+| #   | File                                                   | What it does                                                                                                                                                                     |
+| --- | ------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | `20261006200000_question_catalog_and_profile_lockdown` | Hides the answer key from students; students can no longer write `tier` or other protected profile fields                                                                        |
+| 2   | `20261006200100_exam_session_engine`                   | Server-side sessions and scoring; students lose write access to `exams` and `exam_answers`; backfills statistics; finishes abandoned sessions                                    |
+| 3   | `…200200_bookmarks_and_question_reports`               | Bookmarks and reports                                                                                                                                                            |
+| 4   | `…200300_intelligence_support`                         | Review scheduling support                                                                                                                                                        |
+| 5   | `…200400_study_days`                                   | Streak days                                                                                                                                                                      |
+| 6   | `…200500_gamification`                                 | XP ledger and achievements                                                                                                                                                       |
+| 7   | `…200600_daily_challenges`                             | Daily challenge                                                                                                                                                                  |
+| 8   | `…200700_study_plans`                                  | Study plans                                                                                                                                                                      |
+| 9   | `…200800_friends`                                      | Friends                                                                                                                                                                          |
+| 10  | `…200900_friend_challenges`                            | Friend challenges                                                                                                                                                                |
+| 11  | `…201000_notifications`                                | Notification outbox and inbox                                                                                                                                                    |
+| 12  | `…201100_admin_content_management`                     | Admins can no longer write `questions` or `subtopics` from the browser                                                                                                           |
+| 13  | `20261009100000_rate_limits_and_ai_access`             | Database rate limiter; `ask-ai` access functions                                                                                                                                 |
+| 14  | `20261009100100_admin_access_and_directories`          | Tier grants for central admins only; leaderboard and directory for the server only                                                                                               |
+| 15  | `20261009100200_custom_tests_service_rpcs`             | Shared tests through the server only                                                                                                                                             |
+| 16  | `20261009100300_hints_used`                            | `exam_answers.hints_used` and the nine-argument `save_exam_answer`                                                                                                               |
+| 17  | `20261009100400_score_integrity`                       | `exams.score_verified`, backfill, verified-only leaderboards                                                                                                                     |
+| 18  | `20261009100500_quota_enforcement`                     | Tier limits enforced inside `start_exam_session`                                                                                                                                 |
+| 19  | `20261009100600_ai_insights`                           | `ai_insights` (stored AI explanations) and `readiness_snapshots` with `record_readiness_snapshot`; both service-role only                                                        |
+| 20  | `20261009100700_selection_reasons`                     | `exam_answers.selection_reason` and `record_selection_reasons`                                                                                                                   |
+| 21  | `20261012100000_admin_privacy_and_question_audit`      | Exams, payments, receipts and test attempts readable by the central admin only; `admin_audit_log`; `admin_delete_question`                                                       |
+| 22  | `20261012100100_live_tests`                            | Test schedule and stored link, saved answers, server-timed attempts, random draw per subcategory, role-aware lists, audited de-duplicating import; Ask AI needs a linked attempt |
 
 ### Effects on existing data
 
@@ -87,6 +89,44 @@ pages until they reload.
 3. The Worker calls `${SUPABASE_URL}/functions/v1/ai-insight` with the service-role key it already has. If the
    function is not deployed, the student sees the computed summary (labelled "Computed summary"), never an error.
 4. Order: migrations (19, 20) → deploy both functions → publish the application build.
+
+## 3c. Live tests and admin privacy (migrations 21 and 22)
+
+Apply 21, then 22, and publish the application build in the same window: 22 drops `create_custom_test`,
+`import_custom_test_to_bank` and `list_custom_test_summaries`, which the previous build calls.
+
+- **Check before applying:** in Supabase Auth settings, turn on "Confirm email". The account-conversion flow
+  trusts an address only if the identity provider reports it as confirmed (`email_confirmed_at`); with
+  auto-confirm on, that check proves nothing.
+- Existing tests keep working: `starts_at` is set to each test's creation time, so they stay live until their
+  expiry. Their stored links are empty (only hashes were stored), so the admin list shows no link for them;
+  republish one to get a link.
+- Any in-progress shared attempt keeps its saved-at-submit behaviour; a candidate mid-test during the switch
+  may see "Your time is up" if their deadline passed.
+- Sub-admins lose read access to student exams, payments, receipts and attempt emails (central admin keeps
+  it). If a sub-admin workflow depended on that, it needs a server function that returns only what it needs.
+- Rollback: `supabase/rollback/20261006_milestones_1_to_3_rollback.sql` has sections for both migrations (it
+  does not restore data the new columns held).
+
+Smoke test for these (two accounts, a central admin and a sub-admin, plus a private window):
+
+1. **Privacy:** as the sub-admin run `supabase.from("exams").select("*")`, `.from("subscription_payments")`,
+   `.from("custom_test_attempts")` in the console: each returns no rows. As the central admin they return rows.
+2. **Create:** as the sub-admin create a bank test (two subcategories, small counts) opening in a few minutes;
+   try a count above a subcategory's pool: refused, naming it. Go Live is disabled until the form is complete.
+3. **Before the start:** open the link in the private window: a countdown, no questions. At the start time
+   the page offers the email form on its own.
+4. **Take it:** start, answer, reload the page: the answers and flags are still there and the timer continues.
+   Submit: score and explanations appear; no Ask AI buttons for the guest.
+5. **Deadline:** start another attempt with a short test (10 minutes) and leave it: after the time it is scored
+   from what was saved when you return.
+6. **Close:** after the window the list (as the sub-admin) shows a final ranking with masked addresses; as the
+   central admin the full addresses.
+7. **Convert:** sign in or create an account with the same email (confirm it), the result is saved to the
+   account and Ask AI appears. A different email or an unconfirmed one: a message says why.
+8. **Import:** import an uploaded test's questions twice; the second says 0 added. The audit log holds both.
+9. **Delete:** in Audit & Fix Questions delete an unused broken question (type DELETE): gone, with an audit
+   row. Try one that students have answered: refused.
 
 ## 4. Regenerate the types
 

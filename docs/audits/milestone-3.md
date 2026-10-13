@@ -29,41 +29,41 @@ Not built, deliberately: any **UI** for notifications, subtopic management, stre
 
 ## What was built in this session
 
-| Component | Where | Public surface |
-|---|---|---|
-| Notification service | `src/server/notifications/notification.service.ts` | `dispatch`, `list`, `unreadCount`, `markRead`; `NotificationProvider` |
-| Notification store and provider | `notification.repository.server.ts`, `in-app.provider.server.ts` | Supabase RPCs; idempotent inbox write |
-| Notification wiring | `notification.container.server.ts`, `notification.controller.server.ts`, `src/functions/notifications.*` | `listNotifications`, `getUnreadNotificationCount`, `markNotificationsRead` |
-| Admin content service | `src/server/questions/question-admin.service.ts` (+ repository, controller) | create, import (≤500, all or nothing), update, retire, restore; subtopic list/create/rename/delete |
-| Admin functions | `src/functions/questions.functions.ts` (`admin*`) | 9 functions, all admin-only |
-| Migration | `20261006201100_admin_content_management.sql` | removes every client write on `questions` |
-| Input validation for custom tests | `src/functions/custom-tests.schemas.ts` | zod for all 7 custom-test functions (was bare type casts) |
-| Frontend | `src/routes/admin.tsx` | add, import, repair and "retire" now call the server; no visual change except the button label "Retire Row" |
+| Component                         | Where                                                                                                    | Public surface                                                                                              |
+| --------------------------------- | -------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
+| Notification service              | `src/server/notifications/notification.service.ts`                                                       | `dispatch`, `list`, `unreadCount`, `markRead`; `NotificationProvider`                                       |
+| Notification store and provider   | `notification.repository.server.ts`, `in-app.provider.server.ts`                                         | Supabase RPCs; idempotent inbox write                                                                       |
+| Notification wiring               | `notification.container.server.ts`, `notification.controller.server.ts`, `src/functions/notifications.*` | `listNotifications`, `getUnreadNotificationCount`, `markNotificationsRead`                                  |
+| Admin content service             | `src/server/questions/question-admin.service.ts` (+ repository, controller)                              | create, import (≤500, all or nothing), update, retire, restore; subtopic list/create/rename/delete          |
+| Admin functions                   | `src/functions/questions.functions.ts` (`admin*`)                                                        | 9 functions, all admin-only                                                                                 |
+| Migration                         | `20261006201100_admin_content_management.sql`                                                            | removes every client write on `questions`                                                                   |
+| Input validation for custom tests | `src/functions/custom-tests.schemas.ts`                                                                  | zod for all 7 custom-test functions (was bare type casts)                                                   |
+| Frontend                          | `src/routes/admin.tsx`                                                                                   | add, import, repair and "retire" now call the server; no visual change except the button label "Retire Row" |
 
 Errors use the one existing system; no `any`, no `!`, no type assertions in production code (the test file
 for the controller casts one empty client object).
 
 ## Tests
 
-| Area | Tests |
-|---|---|
-| Notification wording, service (dispatch, partial failure, best-effort reads, paging, mark read) | 6 + 12 |
-| Notification store and in-app provider (ownership in every call, malformed row, idempotent upsert) | 10 |
-| Notification schemas | 17 |
-| Notification database (triggers, claim/stale/skip-locked, privileges, cascade) | 21 |
-| Admin content: service | 23 |
-| Admin content: store | 10 |
-| Admin content: controller (non-admin refused before anything is touched, for all 9 operations) | 11 |
-| Admin content: schemas (forged `created_by`/`status`, 501 rows, bad tags) | 22 |
-| Admin content: database (admin, student and anonymous clients denied insert, update, delete; service role allowed; reads unchanged) | 11 |
-| Custom-test schemas (public shared-test input) | 26 |
-| **Whole suite** | **1,312 in 98 files** |
+| Area                                                                                                                                | Tests                 |
+| ----------------------------------------------------------------------------------------------------------------------------------- | --------------------- |
+| Notification wording, service (dispatch, partial failure, best-effort reads, paging, mark read)                                     | 6 + 12                |
+| Notification store and in-app provider (ownership in every call, malformed row, idempotent upsert)                                  | 10                    |
+| Notification schemas                                                                                                                | 17                    |
+| Notification database (triggers, claim/stale/skip-locked, privileges, cascade)                                                      | 21                    |
+| Admin content: service                                                                                                              | 23                    |
+| Admin content: store                                                                                                                | 10                    |
+| Admin content: controller (non-admin refused before anything is touched, for all 9 operations)                                      | 11                    |
+| Admin content: schemas (forged `created_by`/`status`, 501 rows, bad tags)                                                           | 22                    |
+| Admin content: database (admin, student and anonymous clients denied insert, update, delete; service role allowed; reads unchanged) | 11                    |
+| Custom-test schemas (public shared-test input)                                                                                      | 26                    |
+| **Whole suite**                                                                                                                     | **1,312 in 98 files** |
 
 Defects found by the tests: `createSubtopic` threw synchronously instead of returning a rejected promise
 (service test); the rollback script did not restore `anon`'s legacy write grants on `questions` (the
 rollback fingerprint test); the Prettier-unformatted notification database test failed lint.
 
-**Test-first, stated plainly.** The red phase was *observed* (run, failed for the expected reason: module
+**Test-first, stated plainly.** The red phase was _observed_ (run, failed for the expected reason: module
 not found) for the notification service and the admin content service. For the other new modules (store,
 provider, controller, schemas) the test and the code were written in the same step and run together, so I
 did not watch those fail first. Their tests do assert behaviour that the code could get wrong (ownership
@@ -75,29 +75,31 @@ of TDD in the skill and is recorded here rather than hidden.
 Method: the `nodejs-security-audit` scanner, `check_boundaries.py`, a client-bundle grep of the fresh
 build, and a manual review of every Milestone 3 function and table against the skills' checklists.
 
-| Check | Result |
-|---|---|
-| Authentication | Every student function uses `requireSupabaseAuth` (enforced by `architecture.test.ts`); the only unauthenticated functions are the shared-test links, listed by name. |
-| Identity / IDOR | The user id comes from the verified token. All schemas are `.strict()` and tests reject `userId`. Every repository call names the student; tests assert it. Other students appear only as a username. |
-| Privileges | Clients hold no grants on `notification_outbox`, `notifications`, XP, achievements, plans, friends or challenges, and cannot call their functions (each is `SECURITY DEFINER`, `service_role` only; tested for notifications). **New:** no client role, admins included, can write `questions` (tested). |
-| Answer key | No Milestone 3 response contains `correct_answer` or `rationale`. In the bundle the words appear only as field names in the results page, the admin screen and the shared-test page, which receive keys after submission or from the admin-only function. |
-| Notification content | Messages are built from stored facts; usernames are plain text and must be escaped by whoever renders them (documented; tested with `<b>x</b>`). A student can only trigger a notification to a friend or a challenged friend. |
-| Idempotency | XP: unique ledger key. Notifications: inbox row reuses the outbox id; marking delivered is guarded (`WHERE dispatched_at IS NULL`). Admin retire/restore are repeatable. |
-| Error leakage | Everything new runs in `guard()`: unexpected errors become a generic message (tested for the admin controller). |
-| Client bundle | `.output/public` contains none of: `service_role`, the service-role key name, `supabaseAdmin`, any Milestone 2 or 3 RPC name, the notification or admin store/service class names, `notification_outbox`, `xp_events`. |
-| Scanner output | 22 findings, none real: 11 "LLM API" hits on files with no LLM code, six "express-session" hits on the word *session*, one ImageMagick hit on a regex flag, the shadcn chart component's static CSS (`chart.tsx`), and three Express header notes (this is not Express). |
+| Check                | Result                                                                                                                                                                                                                                                                                                   |
+| -------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Authentication       | Every student function uses `requireSupabaseAuth` (enforced by `architecture.test.ts`); the only unauthenticated functions are the shared-test links, listed by name.                                                                                                                                    |
+| Identity / IDOR      | The user id comes from the verified token. All schemas are `.strict()` and tests reject `userId`. Every repository call names the student; tests assert it. Other students appear only as a username.                                                                                                    |
+| Privileges           | Clients hold no grants on `notification_outbox`, `notifications`, XP, achievements, plans, friends or challenges, and cannot call their functions (each is `SECURITY DEFINER`, `service_role` only; tested for notifications). **New:** no client role, admins included, can write `questions` (tested). |
+| Answer key           | No Milestone 3 response contains `correct_answer` or `rationale`. In the bundle the words appear only as field names in the results page, the admin screen and the shared-test page, which receive keys after submission or from the admin-only function.                                                |
+| Notification content | Messages are built from stored facts; usernames are plain text and must be escaped by whoever renders them (documented; tested with `<b>x</b>`). A student can only trigger a notification to a friend or a challenged friend.                                                                           |
+| Idempotency          | XP: unique ledger key. Notifications: inbox row reuses the outbox id; marking delivered is guarded (`WHERE dispatched_at IS NULL`). Admin retire/restore are repeatable.                                                                                                                                 |
+| Error leakage        | Everything new runs in `guard()`: unexpected errors become a generic message (tested for the admin controller).                                                                                                                                                                                          |
+| Client bundle        | `.output/public` contains none of: `service_role`, the service-role key name, `supabaseAdmin`, any Milestone 2 or 3 RPC name, the notification or admin store/service class names, `notification_outbox`, `xp_events`.                                                                                   |
+| Scanner output       | 22 findings, none real: 11 "LLM API" hits on files with no LLM code, six "express-session" hits on the word _session_, one ImageMagick hit on a regex flag, the shadcn chart component's static CSS (`chart.tsx`), and three Express header notes (this is not Express).                                 |
 
 **Fixed in this milestone**
+
 1. Admins could write, rewrite and (until a foreign key stopped them) delete questions straight from the browser. Now only the server can, behind `is_any_admin`, with validation; "delete" became **retire**, so history stays valid.
 2. The seven custom-test functions, three of them public, trusted their input type with no runtime check. They now go through zod (shape and size limits); their existing business checks and messages are unchanged.
 
 **Open findings (not fixed here; need the owner or a larger change)**
+
 1. **Custom-test functions leak database text and use plain `Error`.**> **Superseded by the fix pass (2026-10-09):** see `docs/audits/fix-pass.md`. Rewritten into the `custom-tests/` domain. `src/functions/custom-tests.functions.ts` predates the layered design: it throws `new Error(error.message)` from Supabase on public endpoints, and has its own copy of the admin check. Fix: move it into a `custom-tests/` domain (controller, service, store, `AppError`s). Not done because it is a rewrite of a feature outside the spec, with no tests of its own.
 2. **`supabase/functions/ask-ai`**> **Superseded by the fix pass (2026-10-09):** see `docs/audits/fix-pass.md`. Hardened (ADR-0006). Original finding: answers with `Access-Control-Allow-Origin: *` and trusts the correct answer sent by the client (carried from Milestones 1 and 2). It is a Deno function outside the test harness.
 3. **`.env` is tracked in git.** The values need rotating and the file untracking by the owner.
-> **Superseded by the fix pass (2026-10-09):** see `docs/audits/fix-pass.md`. The file holds public settings only; a test guards it. Rotation is no longer claimed to be needed for those values.
+   > **Superseded by the fix pass (2026-10-09):** see `docs/audits/fix-pass.md`. The file holds public settings only; a test guards it. Rotation is no longer claimed to be needed for those values.
 4. **The Sub-Admin user directory is probably broken.** Migration `20260906051951` revoked `execute` on `get_subadmin_user_directory()` from `authenticated`, but `admin.tsx` still calls it from the browser. Unverified (no live database here); the roadmap lists this feature as unfinished.
-> **Superseded by the fix pass (2026-10-09):** see `docs/audits/fix-pass.md`. Confirmed by the fix pass: the call was broken. It now goes through a server function and `list_user_directory`.
+   > **Superseded by the fix pass (2026-10-09):** see `docs/audits/fix-pass.md`. Confirmed by the fix pass: the call was broken. It now goes through a server function and `list_user_directory`.
 5. **Admin screens for plans, roles and tiers still write from the browser**, protected by RLS (`central admin manages plans/roles`) and the `assign_user_tier` check (`is_any_admin`, so a sub-admin can assign tiers too: confirm that is intended). I reviewed the policies; they hold, but they are not behind the server layer.
 6. **No rate limiting**> **Superseded by the fix pass (2026-10-09):** see `docs/audits/fix-pass.md`. A shared limiter now covers `ask-ai`, shared tests and payments (ADR-0007). Original finding: on the public shared-test endpoints or any other function; limits are business rules and caps. It needs a platform component (Worker rules).
 7. **Notifications given up after five attempts** stay in the outbox with their last error and nothing alerts anyone.
@@ -106,15 +108,15 @@ build, and a manual review of every Milestone 3 function and table against the s
 
 All timings are reasoned from the query shapes, not benchmarked: there is no populated database here.
 
-| Function | Database round trips | Bound |
-|---|---|---|
-| `listNotifications`, `getUnreadNotificationCount` | 1 claim RPC, then (only if something waits) one inbox upsert per notification and one mark call; then 1 list or count | claim ≤ 50 rows (`batchSize`); list ≤ 50 rows, offset ≤ 10,000; indexes `idx_notification_outbox_pending`, `idx_notifications_user`, `idx_notifications_unread` |
-| `markNotificationsRead` | 1 RPC | ≤ 100 ids |
-| `getGamificationSummary` and the post-submit catch-up | 4 batches at most of 50 sessions/challenges, 3 achievement rounds at most | `GAMIFICATION_SYNC`; the rest carries to the next request; failure never fails a submit |
-| `getStudyStreak` | 1 RPC | last 366 days |
-| `getStudyPlan` | profile + plan + attempt counts | derived on read; nothing stored but the plan |
-| Friends / challenges | 1 RPC per action; lists paged (≤ 50) | the challenge draw reads the active bank like session start (Milestone 2 limitation 12) |
-| Admin writes | 1 statement each (import: 1 insert, ≤ 500 rows); subtopic list ≤ 500 rows | |
+| Function                                              | Database round trips                                                                                                  | Bound                                                                                                                                                           |
+| ----------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `listNotifications`, `getUnreadNotificationCount`     | 1 claim RPC, then (only if something waits) one inbox upsert per notification and one mark call; then 1 list or count | claim ≤ 50 rows (`batchSize`); list ≤ 50 rows, offset ≤ 10,000; indexes `idx_notification_outbox_pending`, `idx_notifications_user`, `idx_notifications_unread` |
+| `markNotificationsRead`                               | 1 RPC                                                                                                                 | ≤ 100 ids                                                                                                                                                       |
+| `getGamificationSummary` and the post-submit catch-up | 4 batches at most of 50 sessions/challenges, 3 achievement rounds at most                                             | `GAMIFICATION_SYNC`; the rest carries to the next request; failure never fails a submit                                                                         |
+| `getStudyStreak`                                      | 1 RPC                                                                                                                 | last 366 days                                                                                                                                                   |
+| `getStudyPlan`                                        | profile + plan + attempt counts                                                                                       | derived on read; nothing stored but the plan                                                                                                                    |
+| Friends / challenges                                  | 1 RPC per action; lists paged (≤ 50)                                                                                  | the challenge draw reads the active bank like session start (Milestone 2 limitation 12)                                                                         |
+| Admin writes                                          | 1 statement each (import: 1 insert, ≤ 500 rows); subtopic list ≤ 500 rows                                             |                                                                                                                                                                 |
 
 - **In-app delivery is one upsert per notification** (N+1) in the worst case, up to 50 on the first read after a burst. In steady state a student has zero to a few waiting. If volume grows, batch the provider (it is a seam, so the change is local).
 - Reads write (the catch-up), so they are `POST` and cannot be cached by HTTP caches; acceptable for per-student data.
@@ -122,14 +124,14 @@ All timings are reasoned from the query shapes, not benchmarked: there is no pop
 
 ## Architecture review (final)
 
-| Check | Result |
-|---|---|
-| `check_boundaries.py` | **PASS: every source dependency points inward** (shared 14, backend 207, functions 35, frontend 63 files) |
+| Check                                    | Result                                                                                                                                                                                                                                                                                                 |
+| ---------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `check_boundaries.py`                    | **PASS: every source dependency points inward** (shared 14, backend 207, functions 35, frontend 63 files)                                                                                                                                                                                              |
 | `architecture.test.ts` fitness functions | pass: engines and services import no Supabase or framework code and read no clock, randomness or environment; function modules load server code only through a dynamic import; every function is authenticated except the three shared-test links; exactly one `RecommendationStrategy` implementation |
-| `scan_repo.py` | no sibling variants, junk drawers, debug output, skipped tests, TODOs or comment blocks; one "commented-out code" hit, which is prose in the rollback script |
-| `architecture_validator.py` | 0 errors, 13 file-length warnings (tests, generated code, and `custom-tests.functions.ts` at 400 lines, which is open finding 1) |
-| Interfaces | Only the ones with a reason to vary exist: `ReviewScheduler`, `RecommendationStrategy`, `NotificationProvider` (ADR-0003, ADR-0005). Stores are declared next to their one consumer. |
-| Largest file | `src/routes/admin.tsx`, 2,054 lines, a pre-existing screen; this milestone only changed four calls in it |
+| `scan_repo.py`                           | no sibling variants, junk drawers, debug output, skipped tests, TODOs or comment blocks; one "commented-out code" hit, which is prose in the rollback script                                                                                                                                           |
+| `architecture_validator.py`              | 0 errors, 13 file-length warnings (tests, generated code, and `custom-tests.functions.ts` at 400 lines, which is open finding 1)                                                                                                                                                                       |
+| Interfaces                               | Only the ones with a reason to vary exist: `ReviewScheduler`, `RecommendationStrategy`, `NotificationProvider` (ADR-0003, ADR-0005). Stores are declared next to their one consumer.                                                                                                                   |
+| Largest file                             | `src/routes/admin.tsx`, 2,054 lines, a pre-existing screen; this milestone only changed four calls in it                                                                                                                                                                                               |
 
 ## Known limitations
 
@@ -153,12 +155,12 @@ All timings are reasoned from the query shapes, not benchmarked: there is no pop
 
 ## Verification results (actual runs, after the last change)
 
-| Command | Result |
-|---|---|
-| `bun run test` | **exit 0: 98 files, 1,312 tests passed, 0 failed** |
-| `bun run lint` | **exit 0: 0 errors, 11 warnings** (all in existing UI components, `use-auth.tsx`, `admin.tsx` and `onboarding.tsx`, none in code from the engines or this milestone) |
-| `bun run typecheck` (`tsc --noEmit`) | **exit 0, no errors** |
-| `bun run build` | **exit 0** |
+| Command                              | Result                                                                                                                                                               |
+| ------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `bun run test`                       | **exit 0: 98 files, 1,312 tests passed, 0 failed**                                                                                                                   |
+| `bun run lint`                       | **exit 0: 0 errors, 11 warnings** (all in existing UI components, `use-auth.tsx`, `admin.tsx` and `onboarding.tsx`, none in code from the engines or this milestone) |
+| `bun run typecheck` (`tsc --noEmit`) | **exit 0, no errors**                                                                                                                                                |
+| `bun run build`                      | **exit 0**                                                                                                                                                           |
 
 I ran the four commands after each of the three parts of this session (notifications, admin content,
 custom-test validation); they passed before the next part began. Before the session's first change the suite

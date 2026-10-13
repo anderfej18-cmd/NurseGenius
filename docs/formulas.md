@@ -5,8 +5,8 @@ attempts, the current time, and a typed config. Nothing here predicts exam resul
 no AI; section 18 describes the one place AI is used, which only phrases what these formulas measured. Tunable values live in `*.config.ts` files next to each engine; this document explains what
 they mean. Design decisions: `docs/adr/0002-derived-learning-state.md`.
 
-**Terms.** *Attempt*: one answered question in a completed session (unanswered questions are not
-attempts). *Topic*: the question's `topic` value. *Evidence*: how much a score rests on the
+**Terms.** _Attempt_: one answered question in a completed session (unanswered questions are not
+attempts). _Topic_: the question's `topic` value. _Evidence_: how much a score rests on the
 student's own attempts rather than on the prior.
 
 **Data that may be missing.** No existing question has a `difficulty` and no existing attempt has a
@@ -19,13 +19,13 @@ and the result lists which components were used.
 
 For one topic with `n` attempts:
 
-| Component | Definition |
-|---|---|
-| **accuracy** | `Σ wᵢ·cᵢ / Σ wᵢ` where `cᵢ` is 1 if correct, `wᵢ = 0.5^(ageDaysᵢ / 30)`: an attempt's weight halves every 30 days |
-| **recency** | accuracy over the latest 10 attempts (all of them if fewer) |
-| **consistency** | share of *qualifying* sessions (at least 3 attempts in the topic) whose accuracy reached 60%; needs at least 2 qualifying sessions, else left out |
-| **difficulty** | accuracy where hard = 1.5, medium = 1, easy = 0.5; only attempts with a known difficulty; needs at least 5 |
-| **calibration** | `1 − mean(|expected − outcome|)` with expected success low 0.4, medium 0.65, high 0.9; only attempts with a confidence; needs at least 5 |
+| Component       | Definition                                                                                                                                        |
+| --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------ | ---------------------------------------------------------------------------------------------------------- |
+| **accuracy**    | `Σ wᵢ·cᵢ / Σ wᵢ` where `cᵢ` is 1 if correct, `wᵢ = 0.5^(ageDaysᵢ / 30)`: an attempt's weight halves every 30 days                                 |
+| **recency**     | accuracy over the latest 10 attempts (all of them if fewer)                                                                                       |
+| **consistency** | share of _qualifying_ sessions (at least 3 attempts in the topic) whose accuracy reached 60%; needs at least 2 qualifying sessions, else left out |
+| **difficulty**  | accuracy where hard = 1.5, medium = 1, easy = 0.5; only attempts with a known difficulty; needs at least 5                                        |
+| **calibration** | `1 − mean(                                                                                                                                        | expected − outcome | )` with expected success low 0.4, medium 0.65, high 0.9; only attempts with a confidence; needs at least 5 |
 
 ```
 raw      = Σ weightₖ·componentₖ / Σ weightₖ        over the components that have data
@@ -73,9 +73,9 @@ falseConfidence = rated ≥ 5  and  wrongHigh  ≥ 3  and  highConfidenceErrorRa
 weakConfidence  = rated ≥ 5  and  correctLow ≥ 3  and  lowConfidenceSuccessRate ≥ 0.50
 ```
 
-**Reading the cells.** *Correct + high*: strong knowledge signal. *Correct + low*: may need reinforcement
-(weak confidence when it dominates). *Wrong + high*: false confidence, the pattern most worth
-correcting. *Wrong + low*: a known weakness. Topics are listed with the most high-confidence mistakes
+**Reading the cells.** _Correct + high_: strong knowledge signal. _Correct + low_: may need reinforcement
+(weak confidence when it dominates). _Wrong + high_: false confidence, the pattern most worth
+correcting. _Wrong + low_: a known weakness. Topics are listed with the most high-confidence mistakes
 first, then alphabetically.
 
 **Limits.** The web UI does not yet ask for a confidence, so existing history is all `unrated`; the
@@ -86,7 +86,7 @@ report is empty of patterns until confidence is collected. Nothing is inferred f
 `src/server/intelligence/review/` (`review.scheduler.ts` interface and replay, `sm2.scheduler.ts`,
 `sm2.config.ts`, `review.service.ts`, `due.ts`).
 
-Every answered attempt is one *review* of that question. A `ReviewScheduler` turns the ordered reviews
+Every answered attempt is one _review_ of that question. A `ReviewScheduler` turns the ordered reviews
 into a schedule; `Sm2ReviewScheduler` is the only implementation (the interface is the replacement
 seam, ADR-0003). The scheduler is pure: it needs no clock, database or framework.
 
@@ -105,15 +105,15 @@ nextReviewAt = reviewedAt + interval days   (interval capped at 365)
 
 With the starting ease of 2.5 and grade 4, successive intervals are 1, 6, 15, 38 days.
 
-| Stored field | Meaning |
-|---|---|
-| `next_review_at` | `nextReviewAt` above |
-| `review_count` | reviews so far (equals `attempts` when up to date) |
-| `last_reviewed_at` | time of the latest review |
-| `interval_days`, `ease` | the algorithm's current values |
-| `review_status` | `new` (never answered), `learning` (fewer than 2 successes in a row, or last answer wrong), `review`, `mastered` (interval ≥ 21 days) |
+| Stored field            | Meaning                                                                                                                               |
+| ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
+| `next_review_at`        | `nextReviewAt` above                                                                                                                  |
+| `review_count`          | reviews so far (equals `attempts` when up to date)                                                                                    |
+| `last_reviewed_at`      | time of the latest review                                                                                                             |
+| `interval_days`, `ease` | the algorithm's current values                                                                                                        |
+| `review_status`         | `new` (never answered), `learning` (fewer than 2 successes in a row, or last answer wrong), `review`, `mastered` (interval ≥ 21 days) |
 
-**Due.** A question is due when `now ≥ next_review_at`; *overdue days* is the time past that, in days.
+**Due.** A question is due when `now ≥ next_review_at`; _overdue days_ is the time past that, in days.
 Retired questions are never listed.
 
 **The stored schedule is a cache.** It is rebuilt by replaying the attempt history oldest first, never
@@ -139,25 +139,25 @@ unknown below 20 attempts. Unknown difficulty is left out of every formula, neve
 `src/server/intelligence/time/` (`time.config.ts`, `time-analytics.service.ts`).
 
 Answer times are reported by the browser and are advisory: the server only clamps them to the
-session's age. An attempt with no time is *untimed*; one with a time of 0 or over 10 minutes is an
-*outlier* (a question left open). Both are counted and left out of every statistic.
+session's age. An attempt with no time is _untimed_; one with a time of 0 or over 10 minutes is an
+_outlier_ (a question left open). Both are counted and left out of every statistic.
 
 **Statistics.** Count, average, median, minimum and maximum, overall, for correct answers, for wrong
 answers, and per topic (slowest average first, with the topic's own correct and wrong averages).
 The five slowest questions by average time are listed.
 
-**Pace.** `median` is the student's own median time over timed attempts. An attempt is *fast* at or below
-`0.6 × median`, *slow* at or above `1.5 × median`, otherwise *typical*. Crossed with correctness this gives
+**Pace.** `median` is the student's own median time over timed attempts. An attempt is _fast_ at or below
+`0.6 × median`, _slow_ at or above `1.5 × median`, otherwise _typical_. Crossed with correctness this gives
 six counts: fast/slow/typical × correct/incorrect. Patterns are reported only once at least 10 attempts are timed.
 
 **Insights** (each needs at least 3 attempts of the pattern and this share of the timed attempts):
 
-| Code | Pattern | Share |
-|---|---|---|
-| `rushing` | fast and wrong | ≥ 15% |
-| `struggling` | slow and wrong | ≥ 15% |
+| Code             | Pattern          | Share |
+| ---------------- | ---------------- | ----- |
+| `rushing`        | fast and wrong   | ≥ 15% |
+| `struggling`     | slow and wrong   | ≥ 15% |
 | `carefulButSlow` | slow and correct | ≥ 25% |
-| `efficient` | fast and correct | ≥ 25% |
+| `efficient`      | fast and correct | ≥ 25% |
 
 **Trend.** Average time of the latest 20 timed attempts against the 20 before them (at least 10 needed):
 `faster` at −10% or less, `slower` at +10% or more, else `steady`; `changePct` is the relative change.
@@ -173,14 +173,14 @@ six counts: fast/slow/typical × correct/incorrect. Patterns are reported only o
 Every candidate question (active, complete, in the chosen exam type and topic) gets six signals in
 0 to 1 and a score that is their weighted sum:
 
-| Signal | Weight | Definition |
-|---|---|---|
-| `weakTopic` | 0.30 | `1 − topicMastery / 100`; a topic with no history uses the prior 50, so 0.5 |
-| `dueReview` | 0.20 | 0 unless the question is due; `0.5 + 0.5 × min(daysOverdue, 14) / 14` once it is |
-| `previousMistake` | 0.20 | `min(1, misses / 3)` for a question missed and not answered correctly since, else 0 |
-| `lowExposure` | 0.10 | `1 / (1 + attempts at this question)` |
-| `recentWeakness` | 0.10 | `1 − recent accuracy` of the topic (mastery component `recency`); 0.5 if unknown |
-| `difficultyFit` | 0.10 | `1 − |difficulty − target|`, difficulty easy 0 / medium 0.5 / hard 1, target = topic mastery / 100; 0.5 if the question's difficulty is unknown |
+| Signal            | Weight | Definition                                                                          |
+| ----------------- | ------ | ----------------------------------------------------------------------------------- | ------------------- | --------------------------------------------------------------------------------------------------------------------- |
+| `weakTopic`       | 0.30   | `1 − topicMastery / 100`; a topic with no history uses the prior 50, so 0.5         |
+| `dueReview`       | 0.20   | 0 unless the question is due; `0.5 + 0.5 × min(daysOverdue, 14) / 14` once it is    |
+| `previousMistake` | 0.20   | `min(1, misses / 3)` for a question missed and not answered correctly since, else 0 |
+| `lowExposure`     | 0.10   | `1 / (1 + attempts at this question)`                                               |
+| `recentWeakness`  | 0.10   | `1 − recent accuracy` of the topic (mastery component `recency`); 0.5 if unknown    |
+| `difficultyFit`   | 0.10   | `1 −                                                                                | difficulty − target | `, difficulty easy 0 / medium 0.5 / hard 1, target = topic mastery / 100; 0.5 if the question's difficulty is unknown |
 
 **Ranking.** By score, then by a seeded hash of `userId|time` and the question id (so students with no
 history do not all get the same questions, yet one request is reproducible), then by id.
@@ -205,15 +205,15 @@ No AI and no copied records: related questions are found from the metadata and w
 A candidate is eligible when it is an **active question of the same exam type** that shares the source's
 **topic or subtopic**, and is not the source. Points:
 
-| Signal | Points |
-|---|---|
-| same topic | 3 |
-| same subtopic | 2 |
-| same difficulty / one step apart (easy–medium, medium–hard) | 1 / 0.5 |
-| shared tags | 0.5 each, at most 2 |
-| similar wording | 1.5 × the wording overlap (0 to 1) |
+| Signal                                                      | Points                             |
+| ----------------------------------------------------------- | ---------------------------------- |
+| same topic                                                  | 3                                  |
+| same subtopic                                               | 2                                  |
+| same difficulty / one step apart (easy–medium, medium–hard) | 1 / 0.5                            |
+| shared tags                                                 | 0.5 each, at most 2                |
+| similar wording                                             | 1.5 × the wording overlap (0 to 1) |
 
-Wording overlap is the Jaccard index of the two questions' *meaningful words*: lower-case letters and digits, at least 4 characters, without the words every exam question uses ("which", "following", "patient", "nurse", "priority" …). It counts only when at least 3 meaningful words are shared and the overlap is at least 0.2, otherwise it is 0. It is a plain-text fallback: no embeddings, no vector search (none exists in this infrastructure, and the bank is small enough that topic-bounded candidates are ranked directly). Wording can raise a question's rank but never makes a question from another topic eligible.
+Wording overlap is the Jaccard index of the two questions' _meaningful words_: lower-case letters and digits, at least 4 characters, without the words every exam question uses ("which", "following", "patient", "nurse", "priority" …). It counts only when at least 3 meaningful words are shared and the overlap is at least 0.2, otherwise it is 0. It is a plain-text fallback: no embeddings, no vector search (none exists in this infrastructure, and the bank is small enough that topic-bounded candidates are ranked directly). Wording can raise a question's rank but never makes a question from another topic eligible.
 
 `score = points / 8.5` (8.5 is the best possible). Order: score, then questions the student has **not** answered
 before answered ones, then id. The default is 5 results, at most 20.
@@ -246,12 +246,12 @@ budget             = min(budget, questions the tier still allows today)  0 ⇒ e
 **Blocks.** Topic practice is guaranteed at least 40% of the budget; the other blocks share the rest in
 this order, each only if it has at least 5 questions to offer (or fewer exist):
 
-| Block | Target | Present when |
-|---|---|---|
-| `due_reviews` | 30% of budget, at most the number due | something is due |
-| `mistake_review` | 20% of budget, at most the unresolved mistakes | questions missed and not answered correctly since |
-| topic blocks | everything left, over 2 topics (3 when urgency is high) | the student has history; else one `mixed_practice` block |
-| `speed_practice` | 10% of budget | right answers take unusually long (time analytics, section 5) |
+| Block            | Target                                                  | Present when                                                  |
+| ---------------- | ------------------------------------------------------- | ------------------------------------------------------------- |
+| `due_reviews`    | 30% of budget, at most the number due                   | something is due                                              |
+| `mistake_review` | 20% of budget, at most the unresolved mistakes          | questions missed and not answered correctly since             |
+| topic blocks     | everything left, over 2 topics (3 when urgency is high) | the student has history; else one `mixed_practice` block      |
+| `speed_practice` | 10% of budget                                           | right answers take unusually long (time analytics, section 5) |
 
 Each chosen topic gets 5 questions first; the remainder is split in proportion to the topic's priority
 by largest remainder (an even split when every priority is 0). Order in the plan: due, mistakes, topics,
@@ -281,16 +281,16 @@ Each component is 0 to 1, or absent when the data for it does not exist. Accurac
 50% with 10 pseudo-attempts, so a short run of right answers cannot look ready:
 `shrunk = (correct + 5) / (attempts + 10)`; 2 of 2 gives 0.583, 100 of 100 gives 0.955.
 
-| Component | Weight | Definition | Absent when |
-|---|---|---|---|
-| **mastery** | 0.25 | overall topic mastery score ÷ 100 (section 1) | no attempts |
-| **accuracy** | 0.10 | shrunk accuracy over all attempts | no attempts |
-| **recent** | 0.15 | shrunk accuracy over the last 14 days | fewer than 10 attempts in them |
-| **mockExam** | 0.15 | shrunk accuracy over `mock_exam` and `timed_exam` sessions | fewer than 20 such attempts |
-| **consistency** | 0.10 | `min(1, days practised in the last 14 ÷ 10)` (UTC days) | no attempts at all (practice only long ago is a real 0) |
-| **speed** | 0.05 | `clamp((240 − median seconds) ÷ (240 − 90), 0, 1)` | fewer than 20 timed attempts |
-| **coverage** | 0.10 | topics with at least 5 attempts ÷ active topics in the bank for this exam type, capped at 1 | no topics in the bank |
-| **repeatedMistakes** | 0.10 | `1 − min(1, share ÷ 0.2)` where `share` = questions missed ≥ 2 times and not answered correctly since ÷ distinct questions attempted | no attempts |
+| Component            | Weight | Definition                                                                                                                           | Absent when                                             |
+| -------------------- | ------ | ------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------- |
+| **mastery**          | 0.25   | overall topic mastery score ÷ 100 (section 1)                                                                                        | no attempts                                             |
+| **accuracy**         | 0.10   | shrunk accuracy over all attempts                                                                                                    | no attempts                                             |
+| **recent**           | 0.15   | shrunk accuracy over the last 14 days                                                                                                | fewer than 10 attempts in them                          |
+| **mockExam**         | 0.15   | shrunk accuracy over `mock_exam` and `timed_exam` sessions                                                                           | fewer than 20 such attempts                             |
+| **consistency**      | 0.10   | `min(1, days practised in the last 14 ÷ 10)` (UTC days)                                                                              | no attempts at all (practice only long ago is a real 0) |
+| **speed**            | 0.05   | `clamp((240 − median seconds) ÷ (240 − 90), 0, 1)`                                                                                   | fewer than 20 timed attempts                            |
+| **coverage**         | 0.10   | topics with at least 5 attempts ÷ active topics in the bank for this exam type, capped at 1                                          | no topics in the bank                                   |
+| **repeatedMistakes** | 0.10   | `1 − min(1, share ÷ 0.2)` where `share` = questions missed ≥ 2 times and not answered correctly since ÷ distinct questions attempted | no attempts                                             |
 
 ```
 score = 100 × Σ weightₖ·valueₖ / Σ weightₖ        over the components that have data
@@ -362,13 +362,13 @@ streak only looks back 366 days.
 
 **XP per finished session.**
 
-| Event (`source_type`, `source_id`) | XP | When |
-|---|---|---|
-| `session`, the session id | 10 × answers that were right **and** the first right answer this student ever gave to that question | every finished session (a 0-XP entry marks it processed) |
-| `daily_practice`, the UTC date | 20 | the session has at least 5 answered questions; once per date |
-| `perfect_session`, the UTC date | 20 | at least 10 answered and all right; once per date |
-| `daily_challenge`, the challenge id | 8 × right answers, plus 10 when every answer is right | the challenge's session is finished; a challenge with no right answers pays 0 |
-| `achievement`, the code | the achievement's XP | when it unlocks |
+| Event (`source_type`, `source_id`)  | XP                                                                                                  | When                                                                          |
+| ----------------------------------- | --------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------- |
+| `session`, the session id           | 10 × answers that were right **and** the first right answer this student ever gave to that question | every finished session (a 0-XP entry marks it processed)                      |
+| `daily_practice`, the UTC date      | 20                                                                                                  | the session has at least 5 answered questions; once per date                  |
+| `perfect_session`, the UTC date     | 20                                                                                                  | at least 10 answered and all right; once per date                             |
+| `daily_challenge`, the challenge id | 8 × right answers, plus 10 when every answer is right                                               | the challenge's session is finished; a challenge with no right answers pays 0 |
+| `achievement`, the code             | the achievement's XP                                                                                | when it unlocks                                                               |
 
 Repeating a question pays nothing, so total per-question XP is bounded by the size of the bank, and
 the bonuses are paid once a day however many sessions qualify. "First right answer" is judged in the
@@ -484,7 +484,7 @@ Pace is client-reported. Every number above is a starting value, not validated a
 
 **Why each item is there.** Every topic or review item stores the mastery the student had when the plan was made (null if the topic was never practised, and for the mock exam), so the screen can say "Pharmacology is at 38.5% mastery against your target of 80%" without inventing a figure.
 
-**Updating a plan.** A student has one plan. Making a new plan keeps the weeks of the earlier plan (same exam) that began before today, cut at yesterday, and plans the weeks from today again from current mastery; progress is derived from the answers, so what was done in the kept weeks stays counted. The plan asks for an update (`attention`) when the exam date on the profile differs from the plan's, or when the student is *behind*. Nothing is ticked by hand: an item is done when the student has answered questions of that topic in the week (verified attempts).
+**Updating a plan.** A student has one plan. Making a new plan keeps the weeks of the earlier plan (same exam) that began before today, cut at yesterday, and plans the weeks from today again from current mastery; progress is derived from the answers, so what was done in the kept weeks stays counted. The plan asks for an update (`attention`) when the exam date on the profile differs from the plan's, or when the student is _behind_. Nothing is ticked by hand: an item is done when the student has answered questions of that topic in the week (verified attempts).
 
 **Exam date.** Saved through `setExamDate`: a real calendar date, after today, within two years.
 
@@ -495,38 +495,38 @@ student or by the client: a challenge's result is read from two exams the server
 
 **Friends.** One row per pair of students, whichever asked (a unique index on the unordered pair).
 
-- *Asking.* By exact username (usernames are already shown on the leaderboards, so this reveals
+- _Asking._ By exact username (usernames are already shown on the leaderboards, so this reveals
   nothing new; an unknown name says so). You cannot ask yourself, someone you are already friends with,
   or someone you already asked. If they had already asked you, asking back accepts it.
-- *Answering.* Only the student who was asked can accept or decline, and only while it waits. Declining
+- _Answering._ Only the student who was asked can accept or decline, and only while it waits. Declining
   deletes the request, so it leaves no record and can be asked again.
-- *Ending.* Either friend can end a friendship; the asker can withdraw a waiting request.
-- *Limits* (starting values): 200 friends, 20 requests waiting from one student. Accepting needs room
+- _Ending._ Either friend can end a friendship; the asker can withdraw a waiting request.
+- _Limits_ (starting values): 200 friends, 20 requests waiting from one student. Accepting needs room
   for both students. The caps, not blocking, are what stop a student being flooded.
-- *Privacy.* Students cannot read the table or call these functions directly. Lists show the other
+- _Privacy._ Students cannot read the table or call these functions directly. Lists show the other
   student as a username and a date only: no email, name, tier or user id.
 
 **Challenges.** A friend challenge is a fixed set of questions chosen by the server, taken by both
 students as ordinary exam sessions (type `custom`, category "Friend challenge").
 
-- *Setting one.* Either friend can set one for the other. The server draws 10 questions at random
+- _Setting one._ Either friend can set one for the other. The server draws 10 questions at random
   (secure randomness) from the active, complete questions of the exam type (the one asked for, else the
   profile's RN/RM preference); the request cannot name questions, the opponent or the closing date. It
   closes 7 days later. A student can have 10 challenges waiting for the other to start (declined or
   started ones do not count).
-- *Taking it.* Each student starts their own session, 15 minutes, in the same question order. Every
+- _Taking it._ Each student starts their own session, 15 minutes, in the same question order. Every
   session rule applies: one active session at a time, the tier's daily allowance (the 10 questions
   count), server scoring. Starting again returns the running session; a declined or expired challenge
   cannot be started, a finished one cannot be started again. A session started before the challenge
   closed can still be finished.
-- *Declining.* Only the challenged student, and only before starting.
-- *State* (for the student looking): `not_started`, `in_progress`, `waiting_for_opponent` (finished,
+- _Declining._ Only the challenged student, and only before starting.
+- _State_ (for the student looking): `not_started`, `in_progress`, `waiting_for_opponent` (finished,
   the other has not), `declined`, `expired` (it closed before the student started, or before the other
   started after the student finished) and `completed`.
-- *Winner.* Both answer the same questions, so the winner is whoever has more right answers; equal is a
+- _Winner._ Both answer the same questions, so the winner is whoever has more right answers; equal is a
   `draw`. Time is not compared because it is reported by the browser.
-- *No spoilers.* The opponent's result is withheld until the student has finished their own session.
-- *Walking away.* When a challenge is read, an exam of either student that has run out of time is
+- _No spoilers._ The opponent's result is withheld until the student has finished their own session.
+- _Walking away._ When a challenge is read, an exam of either student that has run out of time is
   finished first (the same finishing a late submit gets), so a result never waits on a student who left.
 
 **Limits.** No XP or achievement is paid for challenges. Unfriending does not cancel challenges already
@@ -542,12 +542,12 @@ and delivered by the server (ADR-0005).
 
 **Events** (one outbox row each, for the student who needs to know):
 
-| Event | Told to | When |
-|---|---|---|
-| `friend_request_received` | the student asked | a friend request is made |
-| `friend_request_accepted` | the student who asked | the request is accepted (a declined request is deleted and says nothing) |
-| `challenge_received` | the challenged student | a friend challenge is set |
-| `challenge_declined` | the student who set it | the challenge is declined |
+| Event                     | Told to                | When                                                                     |
+| ------------------------- | ---------------------- | ------------------------------------------------------------------------ |
+| `friend_request_received` | the student asked      | a friend request is made                                                 |
+| `friend_request_accepted` | the student who asked  | the request is accepted (a declined request is deleted and says nothing) |
+| `challenge_received`      | the challenged student | a friend challenge is set                                                |
+| `challenge_declined`      | the student who set it | the challenge is declined                                                |
 
 **Delivery.** `dispatch(student)` takes up to `batchSize` waiting notifications, oldest first, and gives each
 to every provider in turn. A notification is marked delivered only when **all** providers succeeded; a
@@ -558,11 +558,11 @@ failure is recorded (`"<provider>: <message>"`, at most 500 characters) and the 
 - Concurrent runs take different rows (`FOR UPDATE SKIP LOCKED`).
 - The in-app inbox row reuses the outbox id, so a repeated delivery leaves one row.
 
-| Setting | Starting value |
-|---|---|
-| `batchSize` | 50 |
-| `maxAttempts` | 5 |
-| `staleAfterSeconds` | 300 |
+| Setting             | Starting value |
+| ------------------- | -------------- |
+| `batchSize`         | 50             |
+| `maxAttempts`       | 5              |
+| `staleAfterSeconds` | 300            |
 
 **Reading.** Listing and counting first deliver what is waiting (best effort: a failure is logged and the
 inbox is shown as it is), so a notification appears on the next read after the event. The inbox is paged
@@ -584,9 +584,9 @@ count of questions due for review, the count of unresolved mistakes, and the cou
 stored score is **not verified** (`exams.score_verified`). Stored exam scores are never used.
 
 - **Evidence.** Fewer than 30 answers: no pattern is reported, only how many more are needed.
-- **Windows.** *Recent* = the last 14 days; *earlier* = everything before.
-- **Topics.** Accuracy per topic. A topic is ranked only with at least 8 answers: *weak* below 60%, *strong* at or above 80%; at most 5 are listed.
-- **Trend** per topic: needs at least 5 answers in both windows; *improving* if recent accuracy is at least 10 points above earlier, *declining* if at least 10 below, otherwise *stable*; else *unknown*.
+- **Windows.** _Recent_ = the last 14 days; _earlier_ = everything before.
+- **Topics.** Accuracy per topic. A topic is ranked only with at least 8 answers: _weak_ below 60%, _strong_ at or above 80%; at most 5 are listed.
+- **Trend** per topic: needs at least 5 answers in both windows; _improving_ if recent accuracy is at least 10 points above earlier, _declining_ if at least 10 below, otherwise _stable_; else _unknown_.
 - **Recent vs earlier overall:** reported when each window has at least 5 answers and they differ by 15 points or more.
 - **Repeated mistakes:** questions missed at least twice and wrong the last time they were seen (most missed first, at most 5 listed, the total always counted).
 - **Effect of revisiting:** among misses followed by a later attempt at the same question, the share answered correctly next time; reported from 10 such misses.
@@ -599,14 +599,14 @@ stored score is **not verified** (`exams.score_verified`). Stored exam scores ar
 Each answer row of a session stores one reason (`exam_answers.selection_reason`), set by the server
 right after the session starts and never by the student; it affects neither the answer nor the score.
 
-| Selection | Reason stored |
-|---|---|
-| Random | `random` |
-| Mistakes / Due | `previous_mistake` / `due_review` |
-| Similar to a question | `similar` |
-| Adaptive | the signal with the largest weighted share of the question's score (section 6), in this order on ties: previous mistake, due review, weak topic, recent weakness, new question |
+| Selection             | Reason stored                                                                                                                                                                  |
+| --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Random                | `random`                                                                                                                                                                       |
+| Mistakes / Due        | `previous_mistake` / `due_review`                                                                                                                                              |
+| Similar to a question | `similar`                                                                                                                                                                      |
+| Adaptive              | the signal with the largest weighted share of the question's score (section 6), in this order on ties: previous mistake, due review, weak topic, recent weakness, new question |
 
-A topic the student has no results in is never called *weak*, and *recent weakness* needs recent results
+A topic the student has no results in is never called _weak_, and _recent weakness_ needs recent results
 in the topic. Difficulty fit is part of the score but is never given as a reason. Sessions started before
 this feature kept no reasons and show none.
 
@@ -633,6 +633,6 @@ plus the topic names they mention. Only those statements and topics are sent; ne
 
 **Cache and limits.** The explanation is stored per student and kind with a SHA-256 digest of the facts and the prompt version. While the digest is unchanged it is returned without a model call. A new call counts against 3 per minute and 40 per day per student (plus a function-wide budget of 1,000 an hour); the limit hit gives the computed summary, not an error.
 
-**Fallback.** When there is too little history, the provider fails, the answer is malformed or ungrounded, or the limit is hit, the student sees the *computed summary* built from the same facts, labelled as such. A readiness estimate is always described as an estimate.
+**Fallback.** When there is too little history, the provider fails, the answer is malformed or ungrounded, or the limit is hit, the student sees the _computed summary_ built from the same facts, labelled as such. A readiness estimate is always described as an estimate.
 
 **Question help.** The server decides whether a question may be explained: only a question of the student's own finished test, or of a finished shared-test attempt whose key they hold. The prompt carries the stored question, key, the official rationale (or says none exists) and the student's own answer. A follow-up question is limited to 300 characters and wrapped as data. "Why was I wrong?" is refused for a question answered correctly or not at all. Answers containing a link are discarded.

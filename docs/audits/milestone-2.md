@@ -20,17 +20,17 @@ student's attempt history, the clock and a typed configuration (`docs/formulas.m
 
 ## What was built
 
-| Component | Where | Public surface |
-|---|---|---|
+| Component                 | Where                      | Public surface                                                                                                                   |
+| ------------------------- | -------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
 | Learning history (shared) | `src/server/intelligence/` | `LearningHistoryService.load`; attempts recomputed from the answer key by `get_student_attempts`, empirical difficulty filled in |
-| Mastery | `mastery/` | `getTopicMastery` |
-| Confidence analytics | `confidence/` | `getConfidenceAnalytics` |
-| Spaced review | `review/` | `listDueReviews`; schedule written when a session is first scored |
-| Time analytics | `time/` | `getTimeAnalytics` |
-| Adaptive selection | `selection/` | `startExamSession({ selection: "adaptive" })` |
-| Similar questions | `similar/` | `getSimilarQuestions` |
-| Daily recommendation | `recommendation/` | `getDailyRecommendation` |
-| Exam readiness | `readiness/` | `getExamReadiness` |
+| Mastery                   | `mastery/`                 | `getTopicMastery`                                                                                                                |
+| Confidence analytics      | `confidence/`              | `getConfidenceAnalytics`                                                                                                         |
+| Spaced review             | `review/`                  | `listDueReviews`; schedule written when a session is first scored                                                                |
+| Time analytics            | `time/`                    | `getTimeAnalytics`                                                                                                               |
+| Adaptive selection        | `selection/`               | `startExamSession({ selection: "adaptive" })`                                                                                    |
+| Similar questions         | `similar/`                 | `getSimilarQuestions`                                                                                                            |
+| Daily recommendation      | `recommendation/`          | `getDailyRecommendation`                                                                                                         |
+| Exam readiness            | `readiness/`               | `getExamReadiness`                                                                                                               |
 
 Seven new server functions (23 in total with Milestone 1's 16), all in `src/functions/intelligence.functions.ts`.
 Errors use the one existing system (`src/lib/app-errors.ts`, `src/server/errors.ts`); no `any`, no `!` and no
@@ -60,19 +60,19 @@ All in `docs/formulas.md`, each with weights, thresholds, a worked example and i
 
 ## Tests
 
-| Area | Tests |
-|---|---|
-| Mastery | 29 |
-| Confidence | 16 |
-| Spaced review (SM-2, due, service, store) | 43 |
-| Time analytics | 24 |
-| Adaptive selection | 37 |
-| Similar questions | 31 |
-| Daily recommendation (strategy, service, store) | 56 |
-| Exam readiness (formula, service, store) | 43 |
-| Whole intelligence layer + function schemas | 375 |
-| Database (PGlite replaying every migration, incl. rollback) | 60 |
-| **Whole suite** | **655 in 56 files** |
+| Area                                                        | Tests               |
+| ----------------------------------------------------------- | ------------------- |
+| Mastery                                                     | 29                  |
+| Confidence                                                  | 16                  |
+| Spaced review (SM-2, due, service, store)                   | 43                  |
+| Time analytics                                              | 24                  |
+| Adaptive selection                                          | 37                  |
+| Similar questions                                           | 31                  |
+| Daily recommendation (strategy, service, store)             | 56                  |
+| Exam readiness (formula, service, store)                    | 43                  |
+| Whole intelligence layer + function schemas                 | 375                 |
+| Database (PGlite replaying every migration, incl. rollback) | 60                  |
+| **Whole suite**                                             | **655 in 56 files** |
 
 Expected values were worked out by hand from the formulas (the arithmetic is in the test comments), not
 copied from program output. Properties covered: determinism and input-order independence, missing-data
@@ -99,20 +99,21 @@ and a manual review of the seven new functions and three new database functions 
 checklists. The built-in `/security-review` command works on a git diff; the clone carries all of this work
 uncommitted (nothing has been committed or pushed, as instructed), so I reviewed the files directly instead.
 
-| Check | Result |
-|---|---|
-| Authentication | All seven functions use `requireSupabaseAuth`; enforced by a test, not by convention. |
-| Identity / IDOR | The user id comes only from the verified token. Schemas are `.strict()` (tests reject `userId`, `nextReviewAt`, `questions`). Every repository query names the student; tests assert it. |
-| Database privileges | `get_student_attempts`, `get_question_difficulty_stats`, `apply_review_states` are `SECURITY DEFINER`, executable by `service_role` only (`EXECUTE` revoked from `PUBLIC`, `anon`, `authenticated`; tested). Their `_user_id` parameter is trusted only because nothing else can call them. |
-| Answer-key exposure | None of the responses contains `correct_answer` or `rationale`; correctness is recomputed from the key inside the database, never read from a stored flag (a forged legacy `is_correct` is ignored; tested). |
-| Enumeration | `getSimilarQuestions` requires the student to have attempted the source question; others get the same 404 as a missing id. |
-| Input bounds | `periodDays` 1–365, `availableMinutes` 10–240, `limit` ≤ 50 (≤ 20 similar), `offset` ≤ 10,000, at most 5,000 attempts analysed per request. |
-| Error leakage | Everything runs in `guard()`; unexpected errors become a generic message, no stack or database text reaches the browser. |
-| Client bundle | `.output/public` contains none of: service-role key name, `service_role`, the three new RPC names, `supabaseAdmin`, the scheduler or strategy class names, `assessReadiness`. |
-| Trust in client-reported values | Time spent and confidence are advisory. They can only change the student's **own** analytics, plan and selection; they never affect scoring, tiers, quotas or leaderboards. |
-| Scanner output | `scan.js`: 53 findings, none real: generated `.output/` bundles, the word "session" read as `express-session`, "LLM API" matched in files with no LLM code, the scoped-package/lockfile rules (the lockfile is `bun.lock`), a regex flag read as ImageMagick. |
+| Check                           | Result                                                                                                                                                                                                                                                                                      |
+| ------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Authentication                  | All seven functions use `requireSupabaseAuth`; enforced by a test, not by convention.                                                                                                                                                                                                       |
+| Identity / IDOR                 | The user id comes only from the verified token. Schemas are `.strict()` (tests reject `userId`, `nextReviewAt`, `questions`). Every repository query names the student; tests assert it.                                                                                                    |
+| Database privileges             | `get_student_attempts`, `get_question_difficulty_stats`, `apply_review_states` are `SECURITY DEFINER`, executable by `service_role` only (`EXECUTE` revoked from `PUBLIC`, `anon`, `authenticated`; tested). Their `_user_id` parameter is trusted only because nothing else can call them. |
+| Answer-key exposure             | None of the responses contains `correct_answer` or `rationale`; correctness is recomputed from the key inside the database, never read from a stored flag (a forged legacy `is_correct` is ignored; tested).                                                                                |
+| Enumeration                     | `getSimilarQuestions` requires the student to have attempted the source question; others get the same 404 as a missing id.                                                                                                                                                                  |
+| Input bounds                    | `periodDays` 1–365, `availableMinutes` 10–240, `limit` ≤ 50 (≤ 20 similar), `offset` ≤ 10,000, at most 5,000 attempts analysed per request.                                                                                                                                                 |
+| Error leakage                   | Everything runs in `guard()`; unexpected errors become a generic message, no stack or database text reaches the browser.                                                                                                                                                                    |
+| Client bundle                   | `.output/public` contains none of: service-role key name, `service_role`, the three new RPC names, `supabaseAdmin`, the scheduler or strategy class names, `assessReadiness`.                                                                                                               |
+| Trust in client-reported values | Time spent and confidence are advisory. They can only change the student's **own** analytics, plan and selection; they never affect scoring, tiers, quotas or leaderboards.                                                                                                                 |
+| Scanner output                  | `scan.js`: 53 findings, none real: generated `.output/` bundles, the word "session" read as `express-session`, "LLM API" matched in files with no LLM code, the scoped-package/lockfile rules (the lockfile is `bun.lock`), a regex flag read as ImageMagick.                               |
 
 Found but **not** in Milestone 2 code, recorded for the Milestone 3 security audit:
+
 1. `getSharedTest`, `startSharedTest` and `submitSharedTest` (public by design, token as credential) use a bare type-cast `inputValidator` with no runtime validation, and run with the service role. They predate this work.
 2. `supabase/functions/ask-ai` answers with `Access-Control-Allow-Origin: *` and trusts the correct answer sent by the client (already listed in the Milestone 1 audit).
 3. `.env` is tracked in git. Key names only were inspected; the values need rotating and the file needs untracking by the owner.
@@ -121,13 +122,13 @@ Found but **not** in Milestone 2 code, recorded for the Milestone 3 security aud
 
 ## Performance review
 
-| Function | Database round trips | Bound |
-|---|---|---|
-| `getTopicMastery`, `getConfidenceAnalytics`, `getTimeAnalytics` | 1 attempts RPC (+ 1 difficulty-statistics RPC for questions with no admin difficulty) | 5,000 attempts, then O(n log n) in memory |
-| `getDailyRecommendation` | history (1–2) + due count + unresolved count + profile, run in parallel | as above |
-| `getExamReadiness` | profile, history (1–2), topic counts, run in parallel | as above |
-| `listDueReviews` | one page query | `limit` ≤ 50 |
-| `startExamSession` (adaptive) | pool (paged, 1,000 rows a page), progress, history | the pool is **the whole active bank** for the exam type and topic, not the session size (see limitation 12) |
+| Function                                                        | Database round trips                                                                  | Bound                                                                                                       |
+| --------------------------------------------------------------- | ------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
+| `getTopicMastery`, `getConfidenceAnalytics`, `getTimeAnalytics` | 1 attempts RPC (+ 1 difficulty-statistics RPC for questions with no admin difficulty) | 5,000 attempts, then O(n log n) in memory                                                                   |
+| `getDailyRecommendation`                                        | history (1–2) + due count + unresolved count + profile, run in parallel               | as above                                                                                                    |
+| `getExamReadiness`                                              | profile, history (1–2), topic counts, run in parallel                                 | as above                                                                                                    |
+| `listDueReviews`                                                | one page query                                                                        | `limit` ≤ 50                                                                                                |
+| `startExamSession` (adaptive)                                   | pool (paged, 1,000 rows a page), progress, history                                    | the pool is **the whole active bank** for the exam type and topic, not the session size (see limitation 12) |
 
 - No N+1: statistics are written by one `apply_review_states` call per batch of 200 questions, read by one RPC per request.
 - The review schedule is a cache of `f(history)`. A new partial index (`idx_stats_user_review_stale`, on a generated `review_stale` column) finds stale rows without a scan. A first request after deployment may recompute up to 5 rounds × 200 questions; the rest carries over to the next request (ADR-0002).
@@ -147,7 +148,7 @@ Found but **not** in Milestone 2 code, recorded for the Milestone 3 security aud
 8. **Adaptive selection reads only admin-set difficulty for candidates** (reading learned difficulty for the whole bank on every start would be costly).
 9. **Readiness for a student whose profile says "Both"** needs an explicit `examType`; there is no automatic choice.
 10. **Server functions were not exercised end to end** (browser → TanStack runtime → live Supabase), only by unit, schema and database tests.
-11. **`docs/**/*.md` and `src/styles.css` are not Prettier-formatted** (tables); all TypeScript is.
+11. **`docs/**/\*.md`and`src/styles.css` are not Prettier-formatted\*\* (tables); all TypeScript is.
 12. **Starting a session reads every complete question for the selection** (question text, options and answer key, 1,000 rows per round trip) before choosing, for random and adaptive alike. This is the Milestone 1 design; adaptive selection inherits it and adds the difficulty column. It is fine for a bank of a few thousand questions and becomes many round trips for tens of thousands. The fix is to select candidates by id, topic and difficulty in the database (or sample there) and read content only for the chosen questions; I have not made it because it changes the start procedure and has no measurements behind it yet.
 
 ## Migration status
@@ -160,15 +161,15 @@ Found but **not** in Milestone 2 code, recorded for the Milestone 3 security aud
 
 ## Verification results (actual runs, after the last change)
 
-| Command | Result |
-|---|---|
-| `bun run test` | **exit 0: 56 files, 655 tests passed, 0 failed** |
-| `bun run lint` | **exit 0: 0 errors, 11 warnings** (all in existing UI components, `use-auth.tsx`, `admin.tsx` and `onboarding.tsx`, none in code written for the engines; the Milestone 1 audit's 1,806 errors were cleared by ignoring the generated Supabase types and fixing the real ones) |
-| `bun run typecheck` (`tsc --noEmit`) | **exit 0, no errors** (Milestone 1's `__root.tsx` error is fixed) |
-| `bun run build` | **exit 0** |
-| `check_boundaries.py` (layers declared in `docs/ARCHITECTURE.md`) | **PASS: every source dependency points inward**; shown to fail on a deliberate violation |
-| `scan_repo.py` | no sibling variants, junk drawers, debug output, skipped tests or TODOs; one "commented-out code" hit, which is prose in the rollback script |
-| `architecture_validator.py` | 0 errors; 10 file-length warnings, mostly large test files and generated code (`session.service.test.ts` is the longest at 548 lines) |
+| Command                                                           | Result                                                                                                                                                                                                                                                                         |
+| ----------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `bun run test`                                                    | **exit 0: 56 files, 655 tests passed, 0 failed**                                                                                                                                                                                                                               |
+| `bun run lint`                                                    | **exit 0: 0 errors, 11 warnings** (all in existing UI components, `use-auth.tsx`, `admin.tsx` and `onboarding.tsx`, none in code written for the engines; the Milestone 1 audit's 1,806 errors were cleared by ignoring the generated Supabase types and fixing the real ones) |
+| `bun run typecheck` (`tsc --noEmit`)                              | **exit 0, no errors** (Milestone 1's `__root.tsx` error is fixed)                                                                                                                                                                                                              |
+| `bun run build`                                                   | **exit 0**                                                                                                                                                                                                                                                                     |
+| `check_boundaries.py` (layers declared in `docs/ARCHITECTURE.md`) | **PASS: every source dependency points inward**; shown to fail on a deliberate violation                                                                                                                                                                                       |
+| `scan_repo.py`                                                    | no sibling variants, junk drawers, debug output, skipped tests or TODOs; one "commented-out code" hit, which is prose in the rollback script                                                                                                                                   |
+| `architecture_validator.py`                                       | 0 errors; 10 file-length warnings, mostly large test files and generated code (`session.service.test.ts` is the longest at 548 lines)                                                                                                                                          |
 
 After each of the eight components I ran the same four commands and they passed before the next began; the
 one lint and one type failure along the way were fixed immediately, not carried forward.

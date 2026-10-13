@@ -5,6 +5,7 @@ Reasons: `incorrect_answer`, `bad_question`, `duplicate`, `unclear`, `wrong_topi
 (`src/lib/report-reasons.ts`).
 
 ## createQuestionReport
+
 - **Authorization**: signed-in student
 - **Request**: `{ questionId: uuid, reason, details?: string ≤ 1000 }`
 - **Response**: `{ ok: true }`
@@ -12,14 +13,17 @@ Reasons: `incorrect_answer`, `bad_question`, `duplicate`, `unclear`, `wrong_topi
 - **Business rules**: the reporter is always the caller; `status` starts `open` and cannot be supplied.
 
 ## listMyQuestionReports
+
 - **Request**: `{ limit?: 1–50, offset? }` → **Response**: `{ items: [{ id, questionId, reason, details, status, resolutionNote, createdAt, resolvedAt, question: { question_text } }], nextOffset }` (own reports, newest first; no key, no reporter ids)
 
 ## adminListQuestionReports
+
 - **Authorization**: admin
 - **Request**: `{ status?: "open"|"resolved"|"dismissed", limit?, offset? }`
 - **Response**: the report fields plus `reporterId` and the full question including `correct_answer` and `rationale`, newest first.
 
 ## resolveQuestionReport
+
 - **Authorization**: admin
 - **Request**: `{ reportId: uuid, status: "resolved"|"dismissed", note?: string ≤ 1000 }`
 - **Response**: `{ ok: true }`

@@ -34,20 +34,20 @@ limits from the shared `src/lib/exam-rules.ts`. No markup or styling changed.
 
 ## Verification matrix (the requested checks)
 
-| Requirement | How it is enforced | Evidence |
-|---|---|---|
-| Score cannot be forged / written by a student | `INSERT/UPDATE/DELETE` revoked on `exams`, `exam_answers`; score computed in `finalize_exam` from the key; request schemas are strict | `security-lockdown.test.ts` (writes → `permission denied`), `sessions.schemas.test.ts` (forged `is_correct`, `score_pct`… rejected), `exam-engine.test.ts` (server scoring) |
-| Answer keys not exposed | `SELECT` on `correct_answer`, `rationale` revoked for client roles; explicit safe column lists; DTOs built field by field | `security-lockdown.test.ts` (`SELECT correct_answer/rationale/*` denied), `session.service.test.ts` / `catalog.service.test.ts` (serialised output contains no key), repository tests (selects contain no key columns) |
-| Rationale not exposed before completion | Only `results()` and the mistake bank return it; `results()` refuses an in-progress session | `session.service.test.ts` (409 while running), `mistake.service.test.ts` (withheld for the running exam) |
-| Tier cannot be self-upgraded; expiry / counters cannot be changed | `profiles` update limited to six onboarding columns | `security-lockdown.test.ts` (`tier`, `expiry_date`, `questions_today`, `last_question_date` → denied) |
-| Daily and per-session limits cannot be bypassed | Enforced in `SessionService.start` on server data; the counter is written only by `start_exam_session`; students cannot edit it | `session.service.test.ts` (caps, expired tier, new day, scholar) + the privilege tests above |
-| No access to another student's session | Every repository query filters by the token's user id; SQL functions take `_user_id` | `session.repository.test.ts`, `exam-engine.test.ts` (other student → `not_found` / `exam_not_found`), RLS select tests |
-| No submit of another student's exam | `submit_exam_session(_user_id, _exam_id)` locks `WHERE user_id = _user_id` | `exam-engine.test.ts` ("refuses to submit another student's session") |
-| Expired exams reject answers; completed exams cannot change | `save_exam_answer` checks status and deadline (+10 s grace) under `FOR SHARE` | `exam-engine.test.ts` (closed after grace, closed after submit) |
-| Duplicate submission does not duplicate statistics | `finalize_exam` returns the stored result when already completed | `exam-engine.test.ts` ("is idempotent…", attempts stay 1) |
-| One active session | Partial unique index + serialised start | `exam-engine.test.ts`, `legacy-backfill.test.ts` |
-| Functions not callable by students | `EXECUTE` revoked from `anon`/`authenticated` | `exam-engine.test.ts` ("privileges") |
-| Statistics and bookmarks/reports isolated | RLS select-own; no client writes | `exam-engine.test.ts`, `bookmarks-reports.test.ts` |
+| Requirement                                                       | How it is enforced                                                                                                                    | Evidence                                                                                                                                                                                                               |
+| ----------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Score cannot be forged / written by a student                     | `INSERT/UPDATE/DELETE` revoked on `exams`, `exam_answers`; score computed in `finalize_exam` from the key; request schemas are strict | `security-lockdown.test.ts` (writes → `permission denied`), `sessions.schemas.test.ts` (forged `is_correct`, `score_pct`… rejected), `exam-engine.test.ts` (server scoring)                                            |
+| Answer keys not exposed                                           | `SELECT` on `correct_answer`, `rationale` revoked for client roles; explicit safe column lists; DTOs built field by field             | `security-lockdown.test.ts` (`SELECT correct_answer/rationale/*` denied), `session.service.test.ts` / `catalog.service.test.ts` (serialised output contains no key), repository tests (selects contain no key columns) |
+| Rationale not exposed before completion                           | Only `results()` and the mistake bank return it; `results()` refuses an in-progress session                                           | `session.service.test.ts` (409 while running), `mistake.service.test.ts` (withheld for the running exam)                                                                                                               |
+| Tier cannot be self-upgraded; expiry / counters cannot be changed | `profiles` update limited to six onboarding columns                                                                                   | `security-lockdown.test.ts` (`tier`, `expiry_date`, `questions_today`, `last_question_date` → denied)                                                                                                                  |
+| Daily and per-session limits cannot be bypassed                   | Enforced in `SessionService.start` on server data; the counter is written only by `start_exam_session`; students cannot edit it       | `session.service.test.ts` (caps, expired tier, new day, scholar) + the privilege tests above                                                                                                                           |
+| No access to another student's session                            | Every repository query filters by the token's user id; SQL functions take `_user_id`                                                  | `session.repository.test.ts`, `exam-engine.test.ts` (other student → `not_found` / `exam_not_found`), RLS select tests                                                                                                 |
+| No submit of another student's exam                               | `submit_exam_session(_user_id, _exam_id)` locks `WHERE user_id = _user_id`                                                            | `exam-engine.test.ts` ("refuses to submit another student's session")                                                                                                                                                  |
+| Expired exams reject answers; completed exams cannot change       | `save_exam_answer` checks status and deadline (+10 s grace) under `FOR SHARE`                                                         | `exam-engine.test.ts` (closed after grace, closed after submit)                                                                                                                                                        |
+| Duplicate submission does not duplicate statistics                | `finalize_exam` returns the stored result when already completed                                                                      | `exam-engine.test.ts` ("is idempotent…", attempts stay 1)                                                                                                                                                              |
+| One active session                                                | Partial unique index + serialised start                                                                                               | `exam-engine.test.ts`, `legacy-backfill.test.ts`                                                                                                                                                                       |
+| Functions not callable by students                                | `EXECUTE` revoked from `anon`/`authenticated`                                                                                         | `exam-engine.test.ts` ("privileges")                                                                                                                                                                                   |
+| Statistics and bookmarks/reports isolated                         | RLS select-own; no client writes                                                                                                      | `exam-engine.test.ts`, `bookmarks-reports.test.ts`                                                                                                                                                                     |
 
 Manual checks from the security skill (grep): no `process.env` in new code outside `config.server.ts`,
 no hard-coded secrets, no string-built queries or filters, no mass assignment, no `any`, no
@@ -55,12 +55,12 @@ no hard-coded secrets, no string-built queries or filters, no mass assignment, n
 
 ## Results (actual runs)
 
-| Command | Result |
-|---|---|
-| `bun run test` | see "Final results" at the end of this document |
-| `bun run typecheck` | **1 error**, `src/routes/__root.tsx:61` (error-component prop type). Not caused by this milestone; the file is untouched. |
-| `bun run lint` | **Fails: 1,806 errors, 13 warnings** (baseline before this work 1,635 / 15). The 8 non-formatting errors and nearly all formatting errors are in files that were already unformatted. The increase is generated `types.ts`, which was already unformatted and now has more lines. The 64 files created in this milestone and `eslint.config.js` lint clean. |
-| `bun run build` | **Pass**. The browser bundle contains no service-role code, no engine function names and no secrets (grep of `.output/public`). |
+| Command             | Result                                                                                                                                                                                                                                                                                                                                                      |
+| ------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `bun run test`      | see "Final results" at the end of this document                                                                                                                                                                                                                                                                                                             |
+| `bun run typecheck` | **1 error**, `src/routes/__root.tsx:61` (error-component prop type). Not caused by this milestone; the file is untouched.                                                                                                                                                                                                                                   |
+| `bun run lint`      | **Fails: 1,806 errors, 13 warnings** (baseline before this work 1,635 / 15). The 8 non-formatting errors and nearly all formatting errors are in files that were already unformatted. The increase is generated `types.ts`, which was already unformatted and now has more lines. The 64 files created in this milestone and `eslint.config.js` lint clean. |
+| `bun run build`     | **Pass**. The browser bundle contains no service-role code, no engine function names and no secrets (grep of `.output/public`).                                                                                                                                                                                                                             |
 
 ## Dev-skills audit (second pass)
 
@@ -68,15 +68,15 @@ After the first pass I checked how much of `Dev skills/` I had actually used and
 about half. I then read the remainder that applies, ran the scanners the skills ship, and fixed what
 they and the review checklist exposed.
 
-| Skill material | First pass | Second pass |
-|---|---|---|
-| `nodejs-security-audit` (`scan.js`) | not run | run on `src/server` + `src/functions`: 0 critical, 0 real high. The 5 "high" findings are false positives (the pattern reads `session(` as `express-session`); the 3 header findings are about the Worker as a whole, not this code. |
-| `clean-code` `check_boundaries.py` | not run | run against the declared layering `shared → service → repository → controller → function`: **PASS, every dependency points inward** (29 imports into generated Supabase files sit outside any layer). |
-| `clean-code` `scan_repo.py` | not run | no sibling variants, junk drawers, debug output, skipped tests or TODOs. |
-| `clean-code` review checklist (A1–A10, risk levels) | not read | applied; findings below. |
-| `backend-architecture` (boundaries, repositories, types) | outline only | read; findings below. |
-| `/security-review` | not run | run; no finding at confidence 8 or above (report in the session). |
-| `express-web-security-spec` | not read | skimmed by topic; the Express-specific rules (cookies, CSRF, sessions, helmet) do not apply to a bearer-token server-function API. |
+| Skill material                                           | First pass   | Second pass                                                                                                                                                                                                                          |
+| -------------------------------------------------------- | ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `nodejs-security-audit` (`scan.js`)                      | not run      | run on `src/server` + `src/functions`: 0 critical, 0 real high. The 5 "high" findings are false positives (the pattern reads `session(` as `express-session`); the 3 header findings are about the Worker as a whole, not this code. |
+| `clean-code` `check_boundaries.py`                       | not run      | run against the declared layering `shared → service → repository → controller → function`: **PASS, every dependency points inward** (29 imports into generated Supabase files sit outside any layer).                                |
+| `clean-code` `scan_repo.py`                              | not run      | no sibling variants, junk drawers, debug output, skipped tests or TODOs.                                                                                                                                                             |
+| `clean-code` review checklist (A1–A10, risk levels)      | not read     | applied; findings below.                                                                                                                                                                                                             |
+| `backend-architecture` (boundaries, repositories, types) | outline only | read; findings below.                                                                                                                                                                                                                |
+| `/security-review`                                       | not run      | run; no finding at confidence 8 or above (report in the session).                                                                                                                                                                    |
+| `express-web-security-spec`                              | not read     | skimmed by topic; the Express-specific rules (cookies, CSRF, sessions, helmet) do not apply to a bearer-token server-function API.                                                                                                   |
 
 Findings and fixes:
 
@@ -110,17 +110,15 @@ Findings and fixes:
 2. **Server functions were not exercised end-to-end** (browser → TanStack runtime → live Supabase). They are covered by unit, schema and database-level tests only.
 3. **Existing quirks left alone** (outside this milestone): `assign_user_tier` and `approve_receipt` are guarded by `is_any_admin`, i.e. any admin (its comment says central admin only); the `ask-ai` edge function trusts the correct answer sent by the client and has no rate limit; `.env` is tracked in git; repository-wide lint and one typecheck error predate this work.
 
-> **Superseded by the fix pass (2026-10-09), `docs/audits/fix-pass.md`:** the `ask-ai` trust and rate-limit gaps are fixed, `assign_user_tier` and `approve_receipt` are now central-admin only (ADR-0008), `.env` is guarded by a test (ADR-0010), and question retirement has an admin screen.
-4. **Question deletion** by admins is blocked by the foreign key from `exam_answers` once a question has been answered; retiring (`status = 'retired'`) is the safe path and is supported by the schema, but no admin UI for it exists yet (Milestone 3).
-5. **Dependencies added**: `vitest`, `@electric-sql/pglite` (dev only).
+> **Superseded by the fix pass (2026-10-09), `docs/audits/fix-pass.md`:** the `ask-ai` trust and rate-limit gaps are fixed, `assign_user_tier` and `approve_receipt` are now central-admin only (ADR-0008), `.env` is guarded by a test (ADR-0010), and question retirement has an admin screen. 4. **Question deletion** by admins is blocked by the foreign key from `exam_answers` once a question has been answered; retiring (`status = 'retired'`) is the safe path and is supported by the schema, but no admin UI for it exists yet (Milestone 3). 5. **Dependencies added**: `vitest`, `@electric-sql/pglite` (dev only).
 
 ## Final results (after the second pass; actual runs)
 
-| Command | Result |
-|---|---|
-| `bun run test` | **244 passed, 25 files, 0 failed** |
-| `bun run typecheck` | **1 error**, `src/routes/__root.tsx:61` (existing, file untouched) |
-| `bun run lint` | **Fails: 1,806 errors, 13 warnings** (baseline 1,635 / 15); 8 non-formatting errors, all existing. The 70 files created in this milestone lint clean. |
-| `bun run build` | **Pass**; browser bundle has no service-role code, engine function names or secrets |
-| `check_boundaries.py` (declared layering) | **Pass** |
-| `/security-review` | no finding at confidence 8 or above |
+| Command                                   | Result                                                                                                                                                |
+| ----------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `bun run test`                            | **244 passed, 25 files, 0 failed**                                                                                                                    |
+| `bun run typecheck`                       | **1 error**, `src/routes/__root.tsx:61` (existing, file untouched)                                                                                    |
+| `bun run lint`                            | **Fails: 1,806 errors, 13 warnings** (baseline 1,635 / 15); 8 non-formatting errors, all existing. The 70 files created in this milestone lint clean. |
+| `bun run build`                           | **Pass**; browser bundle has no service-role code, engine function names or secrets                                                                   |
+| `check_boundaries.py` (declared layering) | **Pass**                                                                                                                                              |
+| `/security-review`                        | no finding at confidence 8 or above                                                                                                                   |

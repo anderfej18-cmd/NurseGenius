@@ -5,6 +5,7 @@ Source: `src/functions/leaderboard.functions.ts`, `src/functions/user-directory.
 functions only the service role can execute (ADR-0008).
 
 ## getLeaderboard
+
 - **Authorization**: any signed-in student.
 - **Request**: `{ period: "daily" | "weekly" }` (strict).
 - **Response**: `{ period, entries: [{ rank, username, avgScore, attempted, correct, activeDays: number | null, isYou }] }`. At most 50 (daily) or 100 (weekly) entries, ranked by the database. **No user ids**: `isYou` marks the caller's row. A student without a username is shown as `Anonymous`.
@@ -12,6 +13,7 @@ functions only the service role can execute (ADR-0008).
 - **Errors**: 400 invalid input · 401 not signed in.
 
 ## getUserDirectory
+
 - **Authorization**: admin (`is_any_admin`), otherwise 403.
 - **Request**: `{ limit?: 1–50 (default 20), offset?: 0–10,000 }`.
 - **Response**: `{ users: [{ username, tier }], nextOffset: number | null, totals: { novice, erudite, scholar, all } }`.
