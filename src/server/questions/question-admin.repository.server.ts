@@ -2,6 +2,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { z } from "zod";
 import { examTypeSchema } from "@/lib/exam-type";
 import type { Database } from "@/integrations/supabase/types";
+import { mapDbError } from "../db-errors";
 import { ConflictError } from "../errors";
 import type { ExamType } from "../types";
 import type {
@@ -71,6 +72,14 @@ export class SupabaseQuestionAdminStore implements QuestionAdminStore {
       .select("id");
     if (error) throw error;
     return data.length > 0;
+  }
+
+  async deleteForever(adminId: string, id: string): Promise<void> {
+    const { error } = await this.db.rpc("admin_delete_question", {
+      _admin_id: adminId,
+      _question_id: id,
+    });
+    if (error) throw mapDbError(error);
   }
 
   async questionScope(id: string): Promise<Scope | null> {

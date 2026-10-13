@@ -50,6 +50,8 @@ export interface QuestionAdminStore {
   /** False when the question does not exist. */
   update(id: string, changes: QuestionChanges): Promise<boolean>;
   setStatus(id: string, status: QuestionStatus): Promise<boolean>;
+  /** Deletes for good and records it in the audit log; the database refuses a question students answered. */
+  deleteForever(adminId: string, id: string): Promise<void>;
   questionScope(id: string): Promise<Scope | null>;
   subtopicScope(id: string): Promise<Scope | null>;
   listSubtopics(examType: ExamType, topic?: string): Promise<readonly Subtopic[]>;
@@ -60,8 +62,8 @@ export interface QuestionAdminStore {
 
 /**
  * Admin content management. Callers are already checked to be admins (controller); this service
- * enforces what makes a question valid and keeps the bank consistent. Questions are retired, never
- * deleted, so every past attempt stays valid.
+ * enforces what makes a question valid and keeps the bank consistent. A question students have answered
+ * is retired, never deleted, so every past attempt stays valid; an unused one may be deleted (audited).
  */
 export class QuestionAdminService {
   constructor(private readonly deps: { readonly store: QuestionAdminStore }) {}
@@ -107,6 +109,12 @@ export class QuestionAdminService {
     if (Object.keys(changes).length === 0) throw new ValidationError("There is nothing to change.");
     if (!(await this.deps.store.update(input.questionId, changes))) throw questionNotFound();
     return { updated: true };
+  }
+
+  /** Permanent. Only a question no student has answered can go; anything else is retired instead. */
+  async delete(adminId: string, questionId: string): Promise<{ deleted: true }> {
+    await this.deps.store.deleteForever(adminId, questionId);
+    return { deleted: true };
   }
 
   retire(questionId: string): Promise<{ status: "retired" }> {

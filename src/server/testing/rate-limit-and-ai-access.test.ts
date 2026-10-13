@@ -162,11 +162,12 @@ describe("get_explainable_shared_question (shared-test attempt key)", () => {
   let questionId: string;
   let otherTestQuestion: string;
 
-  const attempt = async (status: string, hash = HASH) => {
+  /** A guest attempt by default; pass a user to link it to an account, as the verified claim does. */
+  const attempt = async (status: string, hash = HASH, user: string | null = null) => {
     const [{ id }] = await db.admin<{ id: string }>(
-      `INSERT INTO public.custom_test_attempts (custom_test_id, email, access_hash, total_questions, status)
-       VALUES ($1, 'taker@example.com', $2, 1, $3) RETURNING id`,
-      [testId, hash, status],
+      `INSERT INTO public.custom_test_attempts (custom_test_id, email, access_hash, total_questions, status, user_id)
+       VALUES ($1, 'taker@example.com', $2, 1, $3, $4) RETURNING id`,
+      [testId, hash, status, user],
     );
     return id;
   };
@@ -201,17 +202,22 @@ describe("get_explainable_shared_question (shared-test attempt key)", () => {
     otherTestQuestion = await add(otherTest);
   });
 
-  it("returns the question and key for a finished attempt with the right key hash", async () => {
-    const id = await attempt("completed");
+  it("returns the question and key for a finished attempt linked to an account, with the right key hash", async () => {
+    const id = await attempt("completed", HASH, alice);
     const rows = await explain(id, HASH, questionId);
     expect(rows).toHaveLength(1);
     expect(rows[0]).toMatchObject({ correct_answer: "C", topic: "RN" });
   });
 
+  it("returns nothing for a guest attempt, however finished and however right the key", async () => {
+    const guest = await attempt("completed", "g".repeat(64));
+    expect(await explain(guest, "g".repeat(64), questionId)).toEqual([]);
+  });
+
   it("returns nothing for an unfinished attempt, a wrong key, or another test's question", async () => {
-    const running = await attempt("in_progress", "r".repeat(64));
+    const running = await attempt("in_progress", "r".repeat(64), alice);
     expect(await explain(running, "r".repeat(64), questionId)).toEqual([]);
-    const done = await attempt("completed", "d".repeat(64));
+    const done = await attempt("completed", "d".repeat(64), alice);
     expect(await explain(done, "x".repeat(64), questionId)).toEqual([]);
     expect(await explain(done, "d".repeat(64), otherTestQuestion)).toEqual([]);
   });

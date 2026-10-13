@@ -64,14 +64,14 @@ export const ADMIN_TABS = [
   },
   {
     id: "custom-tests",
-    label: "Create a Test",
-    description: "Build a shareable test from your own questions.",
+    label: "Create Live Test",
+    description: "Schedule a timed test from the bank or your own file and share its link.",
     access: "admin",
   },
   {
     id: "audit",
-    label: "Broken Questions",
-    description: "Find questions that are incomplete or cannot be scored.",
+    label: "Audit & Fix Questions",
+    description: "Find incomplete or malformed questions, then edit, retire or delete them.",
     access: "admin",
   },
   {
@@ -140,8 +140,12 @@ export interface NavItem {
   label: string;
   description: string;
   to: StudentPath | "/admin";
-  /** Shown as an icon in the header (it carries a live count) instead of in the menus. */
+  /** Shown as an icon in the top bar (it carries a live count) instead of in the menus. */
   toolbar?: true;
+  /** One of the four buttons kept in the phone's bottom bar (everything else is under "More"). */
+  primary?: true;
+  /** A shorter label for the bottom bar, where each button has about 80px. */
+  shortLabel?: string;
   /** Only the admin page takes this: which tab to open. */
   search?: { tab: AdminTabId };
   /** Extra address patterns on which this button is lit (a test in progress, a results page). */
@@ -170,18 +174,21 @@ const STUDENT_GROUPS: ReadonlyArray<{
         label: "Dashboard",
         description: "Your plan, daily allowance, average score and recent tests.",
         to: "/dashboard",
+        primary: true,
       },
       {
         id: "today",
         label: "Study Today",
         description: "What to study today, why, and your streak and daily challenge.",
         to: "/today",
+        primary: true,
       },
       {
         id: "start-test",
         label: "Take a Test",
         description: "Start a practice test: random, adaptive, mistakes or revision.",
         to: "/exam/start",
+        primary: true,
         alsoActiveOn: [/^\/exam\/[^/]+$/],
         notActiveOn: [/^\/exam\/[^/]+\/results$/],
       },
@@ -233,6 +240,8 @@ const STUDENT_GROUPS: ReadonlyArray<{
         label: "Mastery & Readiness",
         description: "How well you know each topic and your exam-readiness estimate.",
         to: "/mastery",
+        primary: true,
+        shortLabel: "Mastery",
       },
       {
         id: "analysis",
@@ -347,6 +356,15 @@ export function isNavItemActive(item: NavItem, location: NavLocation): boolean {
   return item.alsoActiveOn?.some((pattern) => pattern.test(location.pathname)) ?? false;
 }
 
+/** The button that is lit at this address, or null when none is (an unknown or unlisted page). */
+export function activeNavItem(groups: readonly NavGroup[], location: NavLocation): NavItem | null {
+  for (const group of groups) {
+    const item = group.items.find((candidate) => isNavItemActive(candidate, location));
+    if (item) return item;
+  }
+  return null;
+}
+
 /** The group that holds the lit button, for highlighting the menu that contains it. */
 export function activeGroupId(
   groups: readonly NavGroup[],
@@ -364,3 +382,7 @@ export const menuItemsOf = (group: NavGroup): NavItem[] =>
 /** The buttons that sit in the header itself. */
 export const toolbarItemsOf = (groups: readonly NavGroup[]): NavItem[] =>
   groups.flatMap((group) => group.items.filter((item) => item.toolbar === true));
+
+/** The buttons kept in the phone's bottom bar, in display order. */
+export const bottomBarItemsOf = (groups: readonly NavGroup[]): NavItem[] =>
+  groups.flatMap((group) => group.items.filter((item) => item.primary === true));

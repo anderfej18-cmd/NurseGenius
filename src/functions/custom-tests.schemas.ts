@@ -40,28 +40,65 @@ const snapshotQuestionSchema = z
     option_d: z.string().max(1000),
     correct_answer: z.string().max(5),
     rationale: z.string().max(5000).nullable(),
-    source_question_id: z.string().uuid().nullable().optional(),
-    source_kind: z.enum(["existing", "custom"]),
   })
   .strict();
 
+const examTypeEnum = examTypeSchema;
+const startsAt = isoDate;
+
+const allocationSchema = z
+  .object({ topic: z.string().trim().min(1).max(200), count: z.number().int().min(1).max(250) })
+  .strict();
+
+/**
+ * A live test: a schedule, and either how many questions to draw per subcategory (bank) or the
+ * questions themselves (upload). The link is made on the server.
+ */
 export const createCustomTestSchema = z
   .object({
     title: z.string().max(200),
     description: z.string().max(2000),
-    examType: examTypeSchema,
+    examType: examTypeEnum,
     sourceMode: z.enum(["existing", "upload"]),
     durationMinutes: z.number().finite(),
+    startsAt,
     expiresAt: isoDate,
-    tokenHash,
-    questions: z.array(snapshotQuestionSchema).max(250),
+    allocations: z.array(allocationSchema).max(100).default([]),
+    questions: z.array(snapshotQuestionSchema).max(250).default([]),
   })
-  .strict();
+  .strict()
+  .superRefine((test, ctx) => {
+    if (test.sourceMode === "existing" && test.questions.length > 0)
+      ctx.addIssue({ code: "custom", path: ["questions"], message: "A bank test has no uploads." });
+    if (test.sourceMode === "upload" && test.allocations.length > 0)
+      ctx.addIssue({
+        code: "custom",
+        path: ["allocations"],
+        message: "An upload has no allocations.",
+      });
+  });
 
 export const republishCustomTestSchema = z
-  .object({ testId: z.string().uuid(), tokenHash, expiresAt: isoDate })
+  .object({
+    testId: z.string().uuid(),
+    startsAt,
+    expiresAt: isoDate,
+    durationMinutes: z.number().finite(),
+  })
   .strict();
 
 export const importCustomTestQuestionsSchema = z
   .object({ testId: z.string().uuid(), topic: z.string().max(200), examType: examTypeSchema })
+  .strict();
+
+export const getAttemptSchema = z.object({ attemptId: z.string().uuid(), accessKey }).strict();
+
+export const saveAnswerSchema = z
+  .object({
+    attemptId: z.string().uuid(),
+    accessKey,
+    questionId: z.string().uuid(),
+    answer: z.string().max(1).nullable(),
+    flagged: z.boolean(),
+  })
   .strict();

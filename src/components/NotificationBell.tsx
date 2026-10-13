@@ -1,10 +1,10 @@
 import { Link } from "@tanstack/react-router";
-import { useEffect } from "react";
 import { Bell } from "lucide-react";
+import { useEffect } from "react";
+import { Button } from "@/components/ui/button";
 import { getUnreadNotificationCount } from "@/functions/notifications.functions";
 import { useAuth } from "@/hooks/use-auth";
 import { useServerData } from "@/hooks/use-server-data";
-import { Button } from "@/components/ui/button";
 
 const REFRESH_MS = 60_000;
 
@@ -20,14 +20,17 @@ export function NotificationBell() {
   return (
     <Button
       asChild
-      size="sm"
+      size="icon"
       variant="ghost"
       aria-label={`Notifications${unread > 0 ? `, ${unread} unread` : ""}`}
     >
       <Link to="/notifications" className="relative">
-        <Bell className="h-4 w-4" />
+        <Bell />
         {unread > 0 && (
-          <span className="absolute -top-1 -right-1 min-w-4 h-4 px-1 rounded-full bg-destructive text-destructive-foreground text-[10px] leading-4 text-center">
+          <span
+            aria-hidden="true"
+            className="absolute right-1 top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-destructive px-1 font-mono text-[10px] font-semibold leading-none text-destructive-foreground"
+          >
             {unread > 99 ? "99+" : unread}
           </span>
         )}

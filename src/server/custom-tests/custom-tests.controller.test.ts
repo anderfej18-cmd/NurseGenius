@@ -3,22 +3,39 @@ import { ForbiddenError } from "../errors";
 
 const store = vi.hoisted(() => ({
   createTest: vi.fn(async () => "t1"),
-  summaries: vi.fn(async () => []),
-  completedAttempts: vi.fn(async () => []),
-  findPublished: vi.fn(async () => null),
-  sharedQuestions: vi.fn(async () => []),
-  countQuestions: vi.fn(async () => 0),
-  insertAttempt: vi.fn(),
+  republish: vi.fn(async () => undefined),
+  tests: vi.fn(async () => [] as unknown[]),
+  closedAttempts: vi.fn(async () => [] as unknown[]),
+  importQuestions: vi.fn(async () => ({ added: 1, skipped: 0 })),
+  sharedState: vi.fn(async () => ({ state: "live", serverNow: "x", test: null })),
+  startAttempt: vi.fn(),
+  attempt: vi.fn(),
+  saveAnswer: vi.fn(async () => undefined),
   submitAttempt: vi.fn(),
-  findAttempt: vi.fn(async () => null),
   claimAttempt: vi.fn(),
-  republish: vi.fn(async () => true),
-  importToBank: vi.fn(async () => 1),
 }));
+const roles = vi.hoisted(() => ({ central: false }));
+const confirmedEmail = vi.hoisted(() => ({ value: "taker@example.com" as string | null }));
 const consume = vi.hoisted(() => vi.fn(async () => ({ allowed: true, retryAfterSeconds: 0 })));
 const assertAdmin = vi.hoisted(() => vi.fn());
 
-vi.mock("@/integrations/supabase/client.server", () => ({ supabaseAdmin: {} }));
+vi.mock("@/integrations/supabase/client.server", () => ({
+  supabaseAdmin: {
+    auth: {
+      admin: {
+        getUserById: async () => ({
+          error: null,
+          data: {
+            user: {
+              email: "taker@example.com",
+              email_confirmed_at: confirmedEmail.value === null ? null : "2026-01-01",
+            },
+          },
+        }),
+      },
+    },
+  },
+}));
 vi.mock("../access/admin-access.server", () => ({ assertAdmin }));
 vi.mock("./custom-tests.repository.server", () => ({
   SupabaseCustomTestStore: class {
@@ -37,25 +54,77 @@ vi.mock("../rate-limit/rate-limiter.repository.server", () => ({
 
 import { customTestController } from "./custom-tests.controller.server";
 
-const caller = { userId: "user-1", supabase: {} as never };
+const caller = {
+  userId: "user-1",
+  supabase: { rpc: async () => ({ data: roles.central, error: null }) } as never,
+};
 const HASH = "a".repeat(64);
+const KEY = "k".repeat(40);
 const ID = "6f1c2f6e-0a53-4a54-9d3b-6a6f2b7a0c11";
+const schedule = {
+  startsAt: "2999-01-01T00:00:00.000Z",
+  expiresAt: "2999-01-02T00:00:00.000Z",
+  durationMinutes: 30,
+};
 
 const adminOperations: Array<[string, () => Promise<unknown>]> = [
   ["list", () => customTestController.list(caller)],
+  ["republish", () => customTestController.republish(caller, { testId: ID, ...schedule })],
   [
-    "republish",
+    "importToBank",
+    () => customTestController.importToBank(caller, { testId: ID, examType: "RN", topic: "T" }),
+  ],
+  [
+    "create",
     () =>
-      customTestController.republish(caller, {
-        testId: ID,
-        tokenHash: HASH,
-        expiresAt: "2999-01-01T00:00:00.000Z",
+      customTestController.create(caller, {
+        title: "T",
+        description: "",
+        examType: "RN",
+        sourceMode: "existing",
+        allocations: [{ topic: "T", count: 1 }],
+        questions: [],
+        ...schedule,
       }),
   ],
-  ["importToBank", () => customTestController.importToBank(caller, { testId: ID, topic: "T" })],
 ];
 
-beforeEach(() => vi.clearAllMocks());
+const test = {
+  id: "t1",
+  owner_id: "u2",
+  owner_username: null,
+  title: "T",
+  description: null,
+  exam_type: "RN",
+  source_mode: "upload",
+  duration_minutes: 30,
+  starts_at: "a",
+  expires_at: "b",
+  status: "published",
+  created_at: "c",
+  share_token: "tok",
+  state: "closed",
+  question_count: 1,
+  participant_count: 1,
+  pass_count: 1,
+  average_score: 50,
+  custom_unimported: 0,
+};
+const finished = {
+  id: "a1",
+  custom_test_id: "t1",
+  email: "ada.obi@example.com",
+  score_pct: 50,
+  correct_count: 1,
+  total_questions: 2,
+  completed_at: null,
+};
+
+beforeEach(() => {
+  vi.clearAllMocks();
+  roles.central = false;
+  confirmedEmail.value = "taker@example.com";
+});
 
 describe("customTestController: admin operations", () => {
   it.each(adminOperations)(
@@ -73,7 +142,33 @@ describe("customTestController: admin operations", () => {
     assertAdmin.mockResolvedValue(undefined);
     expect(await customTestController.list(caller)).toEqual([]);
     expect(assertAdmin).toHaveBeenCalledWith(caller.supabase, "user-1");
-    expect(store.summaries).toHaveBeenCalledWith("user-1");
+    expect(store.tests).toHaveBeenCalledWith("user-1");
+  });
+
+  it("shows participant addresses in full to the central admin (by the database's role check) and masked to others", async () => {
+    assertAdmin.mockResolvedValue(undefined);
+    store.tests.mockResolvedValue([test]);
+    store.closedAttempts.mockResolvedValue([finished]);
+    roles.central = true;
+    expect((await customTestController.list(caller))[0].attempts[0].email).toBe(
+      "ada.obi@example.com",
+    );
+    roles.central = false;
+    expect((await customTestController.list(caller))[0].attempts[0].email).toBe("a•••@example.com");
+  });
+
+  it("returns the link token when a test is created, so the admin can copy it at once", async () => {
+    assertAdmin.mockResolvedValue(undefined);
+    const created = await customTestController.create(caller, {
+      title: "T",
+      description: "",
+      examType: "RN",
+      sourceMode: "existing",
+      allocations: [{ topic: "T", count: 1 }],
+      questions: [],
+      ...schedule,
+    });
+    expect(created).toEqual({ id: "t1", token: expect.stringMatching(/^[0-9a-f]{48}$/) });
   });
 });
 
@@ -89,7 +184,7 @@ describe("customTestController: public operations", () => {
   });
 
   it("turns an unexpected database failure into a generic error with no database text", async () => {
-    store.findPublished.mockRejectedValueOnce(
+    store.sharedState.mockRejectedValueOnce(
       new Error('relation "custom_tests" is locked (pw=hunter2)'),
     );
     const errors = vi.spyOn(console, "error").mockImplementation(() => undefined);
@@ -108,25 +203,27 @@ describe("customTestController: public operations", () => {
     consume.mockResolvedValueOnce({ allowed: false, retryAfterSeconds: 300 });
     await expect(
       customTestController.startShared(
-        { tokenHash: HASH, email: "a@b.co", accessKey: "k".repeat(40) },
+        { tokenHash: HASH, email: "a@b.co", accessKey: KEY },
         "1.1.1.1",
       ),
     ).rejects.toMatchObject({ code: "LIMIT_REACHED", statusCode: 429 });
-    expect(store.insertAttempt).not.toHaveBeenCalled();
+    expect(store.startAttempt).not.toHaveBeenCalled();
   });
 
-  it("claims with the signed-in account's email, never one from the request", async () => {
-    store.findAttempt.mockResolvedValueOnce({
-      id: ID,
-      email: "taker@example.com",
-      userId: null,
-    } as never);
+  it("claims only with the address the identity provider confirmed, never one from the request", async () => {
+    store.attempt.mockResolvedValueOnce({ email: "taker@example.com" });
     store.claimAttempt.mockResolvedValueOnce(true);
     expect(
-      await customTestController.claim(
-        { userId: "user-1", email: "Taker@Example.com" },
-        { attemptId: ID, accessKey: "k".repeat(40) },
-      ),
+      await customTestController.claim({ userId: "user-1" }, { attemptId: ID, accessKey: KEY }),
     ).toEqual({ claimed: true });
+  });
+
+  it("refuses to claim when the account's email is not confirmed", async () => {
+    store.attempt.mockResolvedValueOnce({ email: "taker@example.com" });
+    confirmedEmail.value = null;
+    await expect(
+      customTestController.claim({ userId: "user-1" }, { attemptId: ID, accessKey: KEY }),
+    ).rejects.toMatchObject({ statusCode: 403 });
+    expect(store.claimAttempt).not.toHaveBeenCalled();
   });
 });

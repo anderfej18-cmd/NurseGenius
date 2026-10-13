@@ -1,35 +1,38 @@
-import { QuestionHelp } from "@/components/QuestionHelp";
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useServerFn } from "@tanstack/react-start";
-import { useEffect, useMemo, useState } from "react";
-import { AppHeader } from "@/components/AppHeader";
-import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Progress } from "@/components/ui/progress";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Separator } from "@/components/ui/separator";
-import { useAuth } from "@/hooks/use-auth";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { useCallback, useEffect, useState } from "react";
+import { toast } from "sonner";
+import { SharedTestResult, type TestResult } from "@/components/shared-test/SharedTestResult";
+import { SharedTestShell } from "@/components/shared-test/SharedTestShell";
+import { TestGate } from "@/components/shared-test/TestGate";
+import { TestRunner } from "@/components/shared-test/TestRunner";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   claimSharedTestAttempt,
+  getSharedAttempt,
   getSharedTest,
   startSharedTest,
   submitSharedTest,
 } from "@/functions/custom-tests.functions";
-import { ArrowLeft, ArrowRight, CheckCircle2, Clock3 } from "lucide-react";
-import { toast } from "sonner";
+import { useAuth } from "@/hooks/use-auth";
+import { clockOffset } from "@/lib/shared-test-clock";
+import {
+  HANDOFF_KEY,
+  forgetAttempt,
+  readStoredAttempt,
+  rememberAttempt,
+} from "@/lib/shared-attempt-store";
+import { createShareToken } from "@/lib/share-token";
 
 export const Route = createFileRoute("/test/$token")({
   component: SharedTestPage,
   head: () => ({
     meta: [
-      { title: "Shared Nursing Practice Test — NurseGenius" },
+      { title: "Shared nursing practice test | NurseGenius" },
       {
         name: "description",
         content: "Complete a timed shared nursing practice test on NurseGenius.",
       },
-      { property: "og:title", content: "Shared Nursing Practice Test — NurseGenius" },
+      { property: "og:title", content: "Shared nursing practice test | NurseGenius" },
       {
         property: "og:description",
         content: "Complete a timed shared nursing practice test on NurseGenius.",
@@ -41,458 +44,210 @@ export const Route = createFileRoute("/test/$token")({
   }),
 });
 
-interface Question {
-  id: string;
-  position: number;
-  question_text: string;
-  option_a: string;
-  option_b: string;
-  option_c: string;
-  option_d: string;
-}
-interface SharedTestData {
-  expired: boolean;
-  test: {
-    id: string;
-    title: string;
-    description: string | null;
-    exam_type: "RN" | "RM";
-    duration_minutes: number;
-    expires_at: string;
-  } | null;
-  questions: Question[];
-}
-interface TestResultItem {
-  question_id: string;
-  question_position: number;
-  question_text: string;
-  option_a: string;
-  option_b: string;
-  option_c: string;
-  option_d: string;
-  correct_answer: string;
-  rationale: string | null;
-  user_answer: string | null;
-  is_correct: boolean;
-}
-interface TestResult {
-  score: number;
-  correct: number;
-  total: number;
-  results: TestResultItem[];
-}
-const SHARED_ATTEMPT_KEY = "ng.sharedTestAttempt";
+type TestState = Awaited<ReturnType<typeof getSharedTest>>;
+type Attempt = Awaited<ReturnType<typeof getSharedAttempt>>;
 
+interface Session {
+  attemptId: string;
+  accessKey: string;
+  email: string;
+}
+
+const hashOf = async (token: string): Promise<string> => {
+  const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(token));
+  return Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, "0")).join("");
+};
+
+/**
+ * The public page behind a test link: a countdown before it opens, the email form while it is open, one
+ * question at a time while it is taken, and the result with explanations. Everything that matters (state,
+ * clock, deadline, answers, score) comes from the server; this page keeps only the attempt key, so a reload
+ * or a return visit resumes the attempt.
+ */
 function SharedTestPage() {
   const { token } = Route.useParams();
   const { user, profile } = useAuth();
   const navigate = useNavigate();
-  const loadTest = useServerFn(getSharedTest);
-  const beginTest = useServerFn(startSharedTest);
-  const finishTest = useServerFn(submitSharedTest);
-  const claimAttempt = useServerFn(claimSharedTestAttempt);
-  const [testData, setTestData] = useState<SharedTestData | null>(null);
-  const [email, setEmail] = useState("");
-  const [attemptId, setAttemptId] = useState<string | null>(null);
-  const [accessKey, setAccessKey] = useState<string | null>(null);
-  const [startedAt, setStartedAt] = useState<string | null>(null);
-  const [duration, setDuration] = useState(0);
-  const [answers, setAnswers] = useState<Record<string, string>>({});
-  const [position, setPosition] = useState(0);
-  const [remaining, setRemaining] = useState(0);
+  const [tokenHash, setTokenHash] = useState<string | null>(null);
+  const [info, setInfo] = useState<TestState | null>(null);
+  const [offset, setOffset] = useState(0);
+  const [session, setSession] = useState<Session | null>(null);
+  const [attempt, setAttempt] = useState<Attempt | null>(null);
   const [result, setResult] = useState<TestResult | null>(null);
+  const [linked, setLinked] = useState(false);
+  const [claimMessage, setClaimMessage] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
-  useEffect(() => {
-    setEmail(user?.email ?? "");
-  }, [user?.email]);
+  const loadInfo = useCallback(async (hash: string) => {
+    try {
+      const state = await getSharedTest({ data: { tokenHash: hash } });
+      setOffset(clockOffset(state.serverNow, Date.now()));
+      setInfo(state);
+    } catch (error) {
+      setInfo({ state: "closed", serverNow: new Date().toISOString(), test: null });
+      toast.error(error instanceof Error ? error.message : "Could not load this test.");
+    }
+  }, []);
 
+  // Open the page: read the link's state and, if this device already started an attempt, pick it up.
   useEffect(() => {
     let active = true;
-    const tokenHashPromise = crypto.subtle.digest("SHA-256", new TextEncoder().encode(token));
-    void tokenHashPromise.then(async (digest) => {
-      const tokenHash = Array.from(new Uint8Array(digest), (byte) =>
-        byte.toString(16).padStart(2, "0"),
-      ).join("");
+    void (async () => {
+      const hash = await hashOf(token);
+      if (!active) return;
+      setTokenHash(hash);
+      await loadInfo(hash);
+      const stored = readStoredAttempt(localStorage, hash);
+      if (stored === null || !active) return;
       try {
-        const resultData = await loadTest({ data: { tokenHash } });
-        if (active) setTestData(resultData);
-      } catch (error) {
-        if (active) {
-          setTestData({ expired: true, test: null, questions: [] });
-          toast.error(error instanceof Error ? error.message : "Could not load this test.");
-        }
+        const resumed = await getSharedAttempt({
+          data: { attemptId: stored.attemptId, accessKey: stored.accessKey },
+        });
+        if (!active) return;
+        setOffset(clockOffset(resumed.serverNow, Date.now()));
+        setSession(stored);
+        setAttempt(resumed);
+        setLinked(resumed.linked);
+        if (resumed.result) setResult(resumed.result);
+      } catch {
+        forgetAttempt(localStorage, hash);
       }
-    });
+    })();
     return () => {
       active = false;
     };
-  }, [token, loadTest]);
+  }, [token, loadInfo]);
 
-  const questions = testData?.questions ?? [];
-  const question = questions[position];
-  const needed = Math.ceil(questions.length * 0.8);
-  const answeredCount = Object.values(answers).filter(Boolean).length;
-  const options = useMemo(
-    () =>
-      question
-        ? ([
-            ["A", question.option_a],
-            ["B", question.option_b],
-            ["C", question.option_c],
-            ["D", question.option_d],
-          ] as const)
-        : [],
-    [question],
-  );
-
-  useEffect(() => {
-    if (!startedAt || !duration || result) return;
-    const end = new Date(startedAt).getTime() + duration * 60_000;
-    const tick = () => setRemaining(Math.max(0, Math.ceil((end - Date.now()) / 1000)));
-    tick();
-    const timer = window.setInterval(tick, 1000);
-    return () => window.clearInterval(timer);
-  }, [startedAt, duration, result]);
-
-  const submit = async (force = false) => {
-    if (!attemptId || !accessKey || busy || result) return;
-    if (!force && answeredCount < needed && remaining > 0)
-      return toast.error(`Answer at least ${needed} questions before submitting.`);
+  const start = async (email: string) => {
+    if (tokenHash === null) return;
     setBusy(true);
     try {
-      const submitted = await finishTest({
-        data: {
-          attemptId,
-          accessKey,
-          answers: questions.map((entry) => ({
-            question_id: entry.id,
-            user_answer: answers[entry.id] ?? null,
-          })),
-        },
-      });
-      setResult(submitted);
-      if (user) {
-        try {
-          await claimAttempt({ data: { attemptId, accessKey } });
-        } catch {
-          /* Results remain visible if this account cannot claim the attempt. */
-        }
-      }
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Could not submit the test.");
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  useEffect(() => {
-    const deadlineReached =
-      startedAt && duration > 0 && Date.now() >= new Date(startedAt).getTime() + duration * 60_000;
-    if (attemptId && deadlineReached && !result) void submit(true);
-    // Submit once when the countdown ends.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [remaining, attemptId, result, duration, startedAt]);
-
-  const start = async (event: React.FormEvent) => {
-    event.preventDefault();
-    if (!testData || testData.expired) return;
-    setBusy(true);
-    try {
-      const tokenDigest = new Uint8Array(
-        await crypto.subtle.digest("SHA-256", new TextEncoder().encode(token)),
-      );
-      const tokenHash = Array.from(tokenDigest, (byte) => byte.toString(16).padStart(2, "0")).join(
-        "",
-      );
-      const key = Array.from(crypto.getRandomValues(new Uint8Array(32)), (byte) =>
-        byte.toString(16).padStart(2, "0"),
-      ).join("");
-      const started = await beginTest({ data: { tokenHash, email, accessKey: key } });
-      setAttemptId(started.attemptId);
-      setAccessKey(key);
-      setStartedAt(started.startedAt);
-      setDuration(started.durationMinutes);
+      // A fresh 192-bit secret is the attempt key; only its hash ever reaches the database.
+      const { token: accessKey } = await createShareToken();
+      const started = await startSharedTest({ data: { tokenHash, email, accessKey } });
+      const next = { attemptId: started.attemptId, accessKey, email: email.trim().toLowerCase() };
+      rememberAttempt(localStorage, tokenHash, next);
+      setOffset(clockOffset(started.attempt.serverNow, Date.now()));
+      setSession(next);
+      setAttempt(started.attempt);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Could not start this test.");
-    } finally {
-      setBusy(false);
+      if (tokenHash) await loadInfo(tokenHash);
     }
+    setBusy(false);
   };
 
-  if (!testData)
+  const claim = useCallback(
+    async (current: Session) => {
+      if (!user) return;
+      try {
+        const { claimed } = await claimSharedTestAttempt({
+          data: { attemptId: current.attemptId, accessKey: current.accessKey },
+        });
+        setLinked(claimed);
+        if (claimed) sessionStorage.removeItem(HANDOFF_KEY);
+        else setClaimMessage("This result already belongs to an account.");
+      } catch (error) {
+        // The result stays on screen; the reason (an unconfirmed or different email) is said plainly.
+        setClaimMessage(
+          error instanceof Error
+            ? error.message
+            : "This result could not be saved to your account.",
+        );
+      }
+    },
+    [user],
+  );
+
+  // A signed-in visitor's finished attempt is linked to their account once, when both are known.
+  useEffect(() => {
+    if (result && session && user && !linked && claimMessage === null) void claim(session);
+  }, [result, session, user, linked, claimMessage, claim]);
+
+  const submit = async (answers: Array<{ question_id: string; user_answer: string | null }>) => {
+    if (!session) return;
+    setBusy(true);
+    try {
+      const submitted = await submitSharedTest({
+        data: { attemptId: session.attemptId, accessKey: session.accessKey, answers },
+      });
+      setResult(submitted);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Could not submit the test.");
+      // The attempt may have been closed by the clock meanwhile: ask the server what it holds.
+      try {
+        const current = await getSharedAttempt({
+          data: { attemptId: session.attemptId, accessKey: session.accessKey },
+        });
+        setAttempt(current);
+        if (current.result) setResult(current.result);
+      } catch {
+        /* the message above stands */
+      }
+    }
+    setBusy(false);
+  };
+
+  const saveForSignIn = () => {
+    if (session) sessionStorage.setItem(HANDOFF_KEY, JSON.stringify(session));
+  };
+
+  if (info === null)
     return (
-      <>
-        <AppHeader />
-        <main className="container mx-auto max-w-3xl px-4 py-12">
-          <Card className="p-6 text-center text-muted-foreground">Loading test…</Card>
-        </main>
-      </>
-    );
-  if (testData.expired || !testData.test)
-    return (
-      <>
-        <AppHeader />
-        <main className="container mx-auto max-w-xl px-4 py-12">
-          <Card className="p-8 text-center">
-            <Clock3 className="mx-auto h-8 w-8 text-muted-foreground" />
-            <h1 className="mt-4 text-2xl font-semibold">This test link has expired</h1>
-            <p className="mt-2 text-sm text-muted-foreground">
-              Ask the test administrator for a new link.
-            </p>
-          </Card>
-        </main>
-      </>
-    );
-  if (!questions.length)
-    return (
-      <>
-        <AppHeader />
-        <main className="container mx-auto max-w-xl px-4 py-12">
-          <Card className="p-8 text-center">
-            <h1 className="text-2xl font-semibold">No questions available</h1>
-          </Card>
-        </main>
-      </>
+      <SharedTestShell>
+        <div aria-busy="true" className="flex flex-col gap-4">
+          <span className="sr-only">Loading the test</span>
+          <Skeleton className="h-10 w-2/3" />
+          <Skeleton className="h-48 w-full" />
+        </div>
+      </SharedTestShell>
     );
 
-  if (result) {
+  if (result && attempt && session)
     return (
-      <>
-        <AppHeader />
-        <main className="container mx-auto max-w-4xl space-y-6 px-4 py-8">
-          <Card className="p-6">
-            <p className="text-sm uppercase text-muted-foreground">{testData.test.title}</p>
-            <h1 className="mt-2 text-3xl font-bold">
-              {result.score >= 50 ? "Test passed" : "Keep practising"}
-            </h1>
-            <p className="mt-2 text-xl">
-              {result.score}%{" "}
-              <span className="text-base text-muted-foreground">
-                · {result.correct} of {result.total} correct
-              </span>
-            </p>
-            <Progress value={result.score} className="mt-4" />
-          </Card>
-          {user && !profile?.onboarded && (
-            <Card className="p-5">
-              <h2 className="font-semibold">Complete your profile</h2>
-              <p className="mt-1 text-sm text-muted-foreground">
-                Save this result to your NurseGenius account and unlock your study tools.
-              </p>
-              <Button
-                className="mt-3"
-                onClick={() => {
-                  if (attemptId && accessKey)
-                    sessionStorage.setItem(
-                      SHARED_ATTEMPT_KEY,
-                      JSON.stringify({ attemptId, accessKey, email }),
-                    );
-                  void navigate({ to: "/onboarding" });
-                }}
-              >
-                Complete Profile
-              </Button>
-            </Card>
-          )}
-          {!user && (
-            <Card className="p-5">
-              <h2 className="font-semibold">Save your result and complete your profile</h2>
-              <p className="mt-1 text-sm text-muted-foreground">
-                Create or sign in to an account using {email}; your completed test can then be
-                linked to it.
-              </p>
-              <Button className="mt-3" asChild>
-                <Link
-                  to="/auth"
-                  onClick={() => {
-                    if (attemptId && accessKey)
-                      sessionStorage.setItem(
-                        SHARED_ATTEMPT_KEY,
-                        JSON.stringify({ attemptId, accessKey, email }),
-                      );
-                  }}
-                >
-                  Complete Profile
-                </Link>
-              </Button>
-            </Card>
-          )}
-          <section className="space-y-3">
-            <h2 className="text-xl font-semibold">Answer review</h2>
-            {result.results.map((entry, index) => (
-              <Card key={entry.question_id} className="p-5">
-                <div className="flex items-start gap-3">
-                  <span className="text-sm font-semibold text-muted-foreground">{index + 1}.</span>
-                  <div className="min-w-0 flex-1">
-                    <p className="font-medium">{entry.question_text}</p>
-                    <div className="mt-3 space-y-1 text-sm">
-                      {[
-                        ["A", entry.option_a],
-                        ["B", entry.option_b],
-                        ["C", entry.option_c],
-                        ["D", entry.option_d],
-                      ].map(([letter, text]) => (
-                        <p
-                          key={letter}
-                          className={
-                            letter === entry.correct_answer
-                              ? "font-medium text-success"
-                              : letter === entry.user_answer
-                                ? "text-destructive"
-                                : "text-muted-foreground"
-                          }
-                        >
-                          {letter}. {text}
-                          {letter === entry.correct_answer
-                            ? " · Correct answer"
-                            : letter === entry.user_answer
-                              ? " · Your answer"
-                              : ""}
-                        </p>
-                      ))}
-                    </div>
-                    {entry.rationale && (
-                      <p className="mt-3 border-t pt-3 text-sm text-muted-foreground">
-                        <strong>Explanation:</strong> {entry.rationale}
-                      </p>
-                    )}
-                    {user && profile?.onboarded && attemptId && accessKey && (
-                      <QuestionHelp
-                        where={{ kind: "shared", attemptId, accessKey }}
-                        questionId={entry.question_id}
-                        answeredWrong={!entry.is_correct && Boolean(entry.user_answer)}
-                        rationale={entry.rationale}
-                      />
-                    )}
-                  </div>
-                  <CheckCircle2
-                    className={`h-5 w-5 shrink-0 ${entry.is_correct ? "text-success" : "text-muted-foreground"}`}
-                  />
-                </div>
-              </Card>
-            ))}
-          </section>
-        </main>
-      </>
+      <SharedTestShell width="max-w-4xl">
+        <SharedTestResult
+          title={attempt.test.title}
+          result={result}
+          email={session.email}
+          signedIn={Boolean(user)}
+          onboarded={Boolean(profile?.onboarded)}
+          linked={linked}
+          claimMessage={claimMessage}
+          attempt={{ attemptId: session.attemptId, accessKey: session.accessKey }}
+          onSaveAttempt={saveForSignIn}
+          onCompleteProfile={() => {
+            saveForSignIn();
+            void navigate({ to: "/onboarding" });
+          }}
+        />
+      </SharedTestShell>
     );
-  }
 
-  if (!attemptId)
+  if (attempt && session && attempt.status === "in_progress")
     return (
-      <>
-        <AppHeader />
-        <main className="container mx-auto max-w-2xl px-4 py-8">
-          <Card className="p-6">
-            <p className="text-sm uppercase text-muted-foreground">
-              {testData.test.exam_type} · {questions.length} questions ·{" "}
-              {testData.test.duration_minutes} minutes
-            </p>
-            <h1 className="mt-2 text-3xl font-bold">{testData.test.title}</h1>
-            {testData.test.description && (
-              <p className="mt-3 text-muted-foreground">{testData.test.description}</p>
-            )}
-            <Separator className="my-5" />
-            <form className="space-y-3" onSubmit={(event) => void start(event)}>
-              <Label htmlFor="test-email">Email address</Label>
-              <Input
-                id="test-email"
-                type="email"
-                required
-                value={email}
-                onChange={(event) => setEmail(event.target.value)}
-                placeholder="you@example.com"
-              />
-              <Button className="mt-2" disabled={busy}>
-                {busy ? "Starting…" : "Start test"}
-              </Button>
-            </form>
-          </Card>
-        </main>
-      </>
+      <TestRunner
+        attemptId={session.attemptId}
+        accessKey={session.accessKey}
+        view={attempt}
+        offset={offset}
+        submitting={busy}
+        onSubmit={(answers) => void submit(answers)}
+      />
     );
 
   return (
-    <>
-      <AppHeader />
-      <main className="container mx-auto max-w-4xl space-y-5 px-4 py-6">
-        <header className="flex flex-wrap items-start justify-between gap-3">
-          <div>
-            <p className="text-sm text-muted-foreground">
-              {testData.test.exam_type} · {testData.test.title}
-            </p>
-            <h1 className="text-2xl font-semibold">
-              Question {position + 1} of {questions.length}
-            </h1>
-          </div>
-          <div className="flex items-center gap-2 font-mono text-lg" aria-live="polite">
-            <Clock3 className="h-4 w-4" />
-            {Math.floor(remaining / 60)
-              .toString()
-              .padStart(2, "0")}
-            :{(remaining % 60).toString().padStart(2, "0")}
-          </div>
-        </header>
-        <div>
-          <Progress value={(answeredCount / questions.length) * 100} />
-          <p className="mt-1 text-xs text-muted-foreground">
-            {answeredCount} answered · {needed} required to submit before time runs out
-          </p>
-        </div>
-        {question && (
-          <Card className="p-5 sm:p-7">
-            <div className="flex items-start gap-3">
-              <span className="font-semibold text-muted-foreground">{position + 1}.</span>
-              <div className="min-w-0 flex-1">
-                <p className="text-lg font-medium leading-relaxed">{question.question_text}</p>
-                <RadioGroup
-                  className="mt-5 space-y-3"
-                  value={answers[question.id] ?? ""}
-                  onValueChange={(value) =>
-                    setAnswers((current) => ({ ...current, [question.id]: value }))
-                  }
-                >
-                  {options.map(([letter, text]) => (
-                    <Label
-                      key={letter}
-                      htmlFor={`answer-${letter}`}
-                      className="flex cursor-pointer items-start gap-3 border p-3 font-normal"
-                    >
-                      <RadioGroupItem id={`answer-${letter}`} value={letter} />
-                      <span>
-                        <strong>{letter}.</strong> {text}
-                      </span>
-                    </Label>
-                  ))}
-                </RadioGroup>
-              </div>
-            </div>
-          </Card>
-        )}
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <Button
-            variant="outline"
-            disabled={position === 0}
-            onClick={() => setPosition((value) => Math.max(0, value - 1))}
-          >
-            <ArrowLeft className="h-4 w-4" />
-            Previous
-          </Button>
-          <div className="flex gap-2">
-            {position < questions.length - 1 && (
-              <Button
-                onClick={() => setPosition((value) => Math.min(questions.length - 1, value + 1))}
-              >
-                Next
-                <ArrowRight className="h-4 w-4" />
-              </Button>
-            )}
-            <Button variant="destructive" disabled={busy} onClick={() => void submit()}>
-              {busy ? "Submitting…" : "Submit test"}
-            </Button>
-          </div>
-        </div>
-      </main>
-    </>
+    <SharedTestShell width="max-w-2xl">
+      <TestGate
+        info={info}
+        offset={offset}
+        defaultEmail={user?.email ?? ""}
+        busy={busy}
+        onStart={(email) => void start(email)}
+        onRefresh={() => {
+          if (tokenHash) void loadInfo(tokenHash);
+        }}
+      />
+    </SharedTestShell>
   );
 }

@@ -21,10 +21,22 @@ function files(dir: string): string[] {
 // ---- Page access ----
 
 const routeFiles = files("src/routes").filter((file) => !file.endsWith("__root.tsx"));
+// `/_app` is the pathless layout every signed-in page sits under; its own test is below.
+const APP_LAYOUT = "/_app";
 const routes = routeFiles.flatMap((file) => {
-  const path = /createFileRoute\(\s*"([^"]+)"/.exec(read(file))?.[1];
-  return path === undefined ? [] : [{ path, file, source: read(file) }];
+  const declared = /createFileRoute\(\s*"([^"]+)"/.exec(read(file))?.[1];
+  if (declared === undefined || declared === APP_LAYOUT) return [];
+  const underLayout = declared.startsWith(`${APP_LAYOUT}/`);
+  return [
+    {
+      path: underLayout ? declared.slice(APP_LAYOUT.length) : declared,
+      file,
+      source: read(file),
+      underLayout,
+    },
+  ];
 });
+const layoutSource = read("src/routes/_app.tsx");
 
 /** Pages anyone may open, and why. */
 const PUBLIC_PAGES: Readonly<Record<string, string>> = {
@@ -47,13 +59,29 @@ describe("who may open each page", () => {
       if (route.path in PUBLIC_PAGES || route.path === "/progress" || route.path === "/admin")
         continue;
       const guarded =
+        route.underLayout ||
         route.source.includes("SignedInPage") ||
         /navigate\(\{\s*to:\s*"\/auth"/.test(route.source) ||
         route.source.includes("<Outlet");
       expect(
         guarded,
-        `${route.path} (${route.file}) neither uses SignedInPage nor sends visitors to /auth`,
+        `${route.path} (${route.file}) is not under the _app layout and does not send visitors to /auth`,
       ).toBe(true);
+    }
+  });
+
+  it("has the _app layout send a visitor who is signed out to /auth and an unfinished student to /onboarding", () => {
+    expect(layoutSource).toMatch(/navigate\(\{\s*to:\s*"\/auth"/);
+    expect(layoutSource).toMatch(/navigate\(\{\s*to:\s*"\/onboarding"/);
+    // An admin may open the admin tools without having finished onboarding.
+    expect(layoutSource).toMatch(/!isAdmin/);
+    // Nothing is drawn for a visitor who is signed out while the redirect happens.
+    expect(layoutSource).toMatch(/!loading && !user\) return null/);
+  });
+
+  it("keeps public pages out of the signed-in layout", () => {
+    for (const route of routes) {
+      if (route.path in PUBLIC_PAGES) expect(route.underLayout, route.path).toBe(false);
     }
   });
 
@@ -110,22 +138,43 @@ const DIRECT_ACCESS: Readonly<Record<string, DirectAccess>> = {
     rpcs: [],
     why: "Saves the first-run fields; the database grants only those columns.",
   },
-  "src/routes/payments.tsx": {
+  "src/routes/_app/payments.tsx": {
     tables: ["plans", "subscription_payments"],
     rpcs: [],
     why: "Reads the plans and the person's own payments; payment is verified by the server route.",
   },
-  "src/routes/admin.tsx": {
-    tables: ["exams", "plans", "profiles", "questions", "subscription_payments", "user_roles"],
+  // Central-admin tabs; the database allows these reads and writes to admins (roles: central admin) only.
+  "src/components/admin/PaymentsTab.tsx": {
+    tables: ["profiles", "subscription_payments"],
+    rpcs: [],
+    why: "Upgrades tab: every plan payment with the payer's current tier.",
+  },
+  "src/components/admin/PricingTab.tsx": {
+    tables: ["plans"],
+    rpcs: [],
+    why: "Pricing tab: reads and updates plan price, length and visibility.",
+  },
+  "src/components/admin/UsersTab.tsx": {
+    tables: ["exams", "profiles"],
     rpcs: ["assign_user_tier"],
-    why: "Central-admin tabs (Upgrades, Pricing, Users, Assign Admin) and a question count; the database allows these to admins only.",
+    why: "Users tab: profiles with average scores; revoking a plan (the SQL function checks the caller).",
+  },
+  "src/components/admin/AssignTierDialog.tsx": {
+    tables: [],
+    rpcs: ["assign_user_tier"],
+    why: "Users tab: gives a student a plan (the SQL function checks the caller).",
+  },
+  "src/components/admin/AdminAccessTab.tsx": {
+    tables: ["profiles", "user_roles"],
+    rpcs: [],
+    why: "Assign Admin tab: finds users by username and grants or revokes the admin role.",
   },
 };
 
 /** Files that import the browser client but make no table or function call of their own. */
 const CLIENT_ONLY: Readonly<Record<string, string>> = {
   "src/routes/auth.tsx": "Sign in, sign up and Google sign-in (Supabase Auth).",
-  "src/routes/dashboard.tsx":
+  "src/routes/_app/dashboard.tsx":
     "Listens for changes to the person's own profile row to refresh the daily counter.",
   "src/lib/ask-ai.ts": "Calls the ask-ai Edge Function with the signed-in session.",
 };

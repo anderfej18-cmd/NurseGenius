@@ -1,16 +1,28 @@
 import { Link } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
+import { PlanWeeks } from "@/components/progress/PlanWeeks";
+import { LoadFailed } from "@/components/app/LoadFailed";
+import { Section } from "@/components/app/Section";
 import { InsightCard } from "@/components/InsightCard";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
+import { Field } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Skeleton } from "@/components/ui/skeleton";
 import { createStudyPlan, getStudyPlan, setExamDate } from "@/functions/engagement.functions";
 import { useAuth } from "@/hooks/use-auth";
 import { useServerData } from "@/hooks/use-server-data";
+import { PLAN_LIMITS, validatePlanSettings, type PlanErrors } from "@/lib/plan-form";
 import {
   examCountdown,
   planAttentionText,
@@ -32,7 +44,13 @@ export function PlanPanel() {
     profile?.exam_preference === "RM" ? "RM" : "RN",
   );
   const [date, setDate] = useState(profile?.exam_date ?? "");
-  const [busy, setBusy] = useState(false);
+  const [busy, setBusy] = useState<"date" | "plan" | null>(null);
+  const [errors, setErrors] = useState<PlanErrors>({});
+  const fields = {
+    dailyMinutes: useRef<HTMLInputElement>(null),
+    daysPerWeek: useRef<HTMLInputElement>(null),
+    targetScore: useRef<HTMLInputElement>(null),
+  };
 
   // Start from the plan's own settings, so updating it changes only what the student edits.
   useEffect(() => {
@@ -44,8 +62,8 @@ export function PlanPanel() {
   }, [current]);
   useEffect(() => setDate(profile?.exam_date ?? ""), [profile?.exam_date]);
 
-  const run = async (work: () => Promise<unknown>, done: string) => {
-    setBusy(true);
+  const run = async (kind: "date" | "plan", work: () => Promise<unknown>, done: string) => {
+    setBusy(kind);
     try {
       await work();
       toast.success(done);
@@ -53,202 +71,187 @@ export function PlanPanel() {
     } catch (error) {
       toast.error((error as Error).message);
     }
-    setBusy(false);
+    setBusy(null);
   };
 
-  const saveDate = () => run(() => setExamDate({ data: { examDate: date } }), "Exam date saved.");
-  const savePlan = () =>
-    run(
+  const saveDate = () =>
+    run("date", () => setExamDate({ data: { examDate: date } }), "Exam date saved.");
+  const savePlan = () => {
+    const found = validatePlanSettings({
+      dailyMinutes: daily,
+      daysPerWeek: days,
+      targetScore: target,
+    });
+    setErrors(found);
+    const first = (Object.keys(found) as (keyof typeof fields)[])[0];
+    if (first) {
+      fields[first].current?.focus();
+      return;
+    }
+    void run(
+      "plan",
       () =>
         createStudyPlan({
           data: { examType, dailyMinutes: daily, daysPerWeek: days, targetScore: target },
         }),
       current ? "Study plan updated." : "Study plan created.",
     );
+  };
 
   const attention = current ? planAttentionText(current.attention) : null;
   const today = new Date().toISOString().slice(0, 10);
 
   return (
-    <div className="space-y-4">
-      {plan.error && <p className="text-destructive text-sm">{plan.error}</p>}
-      {plan.loading && !current && (
-        <p className="text-sm text-muted-foreground">Loading your plan…</p>
+    <div className="flex flex-col gap-6">
+      {plan.error && !current && <LoadFailed load={plan} label="Your plan" />}
+      {plan.loading && !current && !plan.error && (
+        <div aria-busy="true">
+          <span className="sr-only">Loading your plan</span>
+          <Skeleton className="h-48 w-full" />
+        </div>
       )}
 
       {current && (
-        <Card className="p-5 space-y-3">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <h2 className="font-semibold">Your study plan</h2>
+        <Section
+          title="Your study plan"
+          description={`${examCountdown(daysUntil(current.plan.examDate))} About ${current.plan.questionsPerDay} questions a day, ${current.progress.questionsDone} done so far. Questions count as done when you answer them in a test; nothing is ticked by hand.`}
+          actions={
             <Badge variant="secondary">{studyPlanStatusText(current.progress.status)}</Badge>
-          </div>
-          <p className="text-sm text-muted-foreground">
-            {examCountdown(daysUntil(current.plan.examDate))} About {current.plan.questionsPerDay}{" "}
-            questions a day, {current.progress.questionsDone} done so far. Questions count as done
-            when you answer them in a test; nothing is ticked by hand.
-          </p>
+          }
+        >
           {attention && (
-            <div className="rounded-lg border border-warning/50 p-3 text-sm space-y-2">
-              <p>{attention}</p>
-              <p className="text-xs text-muted-foreground">
+            <Alert variant="warning">
+              <AlertDescription>{attention}</AlertDescription>
+              <AlertDescription className="text-xs">
                 Weeks already begun stay in the plan with what you did in them; only the weeks from
                 today are planned again, from your current results.
-              </p>
-              <Button size="sm" disabled={busy} onClick={() => void savePlan()}>
-                Update plan
-              </Button>
-            </div>
+              </AlertDescription>
+              <div className="pt-1">
+                <Button size="sm" loading={busy === "plan"} onClick={savePlan}>
+                  Update plan
+                </Button>
+              </div>
+            </Alert>
           )}
-          {current.progress.weeks.map((week) => {
-            const planned = current.plan.weeks[week.index];
-            const isCurrent = week.index === current.progress.currentWeek;
-            return (
-              <details key={week.index} open={isCurrent} className="rounded-lg border p-3">
-                <summary className="cursor-pointer space-y-1">
-                  <span className="flex justify-between text-sm">
-                    <span className={isCurrent ? "font-semibold" : ""}>
-                      Week {week.index + 1}
-                      {isCurrent && " (this week)"}
-                      <span className="text-muted-foreground font-normal">
-                        {" "}
-                        · {planned.startsOn} to {planned.endsOn}
-                      </span>
-                    </span>
-                    <span className="text-muted-foreground">
-                      {week.done} / {week.planned}
-                    </span>
-                  </span>
-                  <Progress
-                    value={week.planned === 0 ? 0 : Math.min(100, (week.done / week.planned) * 100)}
-                  />
-                </summary>
-                <ul className="mt-3 space-y-2">
-                  {planned.items.map((item, i) => (
-                    <li
-                      key={`${item.kind}-${item.topic ?? "mock"}`}
-                      className="text-sm flex flex-wrap items-start justify-between gap-2"
-                    >
-                      <div className="space-y-0.5">
-                        <p className="font-medium">
-                          {planItemLabel(item)}{" "}
-                          <span className="text-muted-foreground font-normal">
-                            · {week.items[i]?.done ?? 0} / {item.questions} questions
-                          </span>
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                          {planItemReason(item, current.settings.targetScore)}
-                        </p>
-                      </div>
-                      {planned.endsOn >= today && (
-                        <Button asChild size="sm" variant="outline">
-                          <Link
-                            to="/exam/start"
-                            search={{
-                              examType: current.examType,
-                              ...(item.topic === null ? {} : { topic: item.topic }),
-                            }}
-                          >
-                            Practise
-                          </Link>
-                        </Button>
-                      )}
-                    </li>
-                  ))}
-                </ul>
-              </details>
-            );
-          })}
+          <PlanWeeks plan={current} today={today} />
           <InsightCard kind="plan" />
-        </Card>
+        </Section>
       )}
 
-      <Card className="p-5 space-y-3">
-        <h2 className="font-semibold">Exam date</h2>
-        <p className="text-sm text-muted-foreground">
-          Plans count back from your exam date. It must be in the future.
-        </p>
-        <div className="flex flex-wrap items-end gap-3">
-          <Field label="Exam date" id="plan-exam-date">
-            <Input
-              id="plan-exam-date"
-              type="date"
-              min={today}
-              value={date}
-              onChange={(e) => setDate(e.target.value)}
-            />
-          </Field>
-          <Button
-            variant="outline"
-            disabled={busy || date === "" || date === profile?.exam_date}
-            onClick={() => void saveDate()}
-          >
-            Save date
-          </Button>
-        </div>
-      </Card>
-
-      <Card className="p-5 space-y-4">
-        <h2 className="font-semibold">{current ? "Change your plan" : "Make a study plan"}</h2>
-        <p className="text-sm text-muted-foreground">
-          Your weakest topics are spread across the weeks.
-          {!profile?.exam_date && " Set your exam date above first."}
-        </p>
-        <div className="grid sm:grid-cols-4 gap-3">
-          <Field label="Exam" id="plan-exam">
-            <select
-              id="plan-exam"
-              className="h-10 rounded-md border bg-background px-2 text-sm"
-              value={examType}
-              onChange={(event) => setExamType(event.target.value === "RM" ? "RM" : "RN")}
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,2fr)_minmax(0,3fr)] lg:items-start">
+        <Section
+          title="Exam date"
+          description="Plans count back from your exam date. It must be in the future."
+        >
+          <div className="flex flex-wrap items-end gap-3">
+            <Field label="Exam date" className="min-w-0 flex-1">
+              {(control) => (
+                <Input
+                  {...control}
+                  type="date"
+                  min={today}
+                  value={date}
+                  onChange={(e) => setDate(e.target.value)}
+                />
+              )}
+            </Field>
+            <Button
+              variant="outline"
+              loading={busy === "date"}
+              disabled={date === "" || date === profile?.exam_date}
+              onClick={() => void saveDate()}
             >
-              <option value="RN">RN</option>
-              <option value="RM">RM</option>
-            </select>
-          </Field>
-          <Field label="Minutes a day" id="plan-minutes">
-            <Input
-              id="plan-minutes"
-              type="number"
-              min={10}
-              max={240}
-              value={daily}
-              onChange={(e) => setDaily(Number(e.target.value))}
-            />
-          </Field>
-          <Field label="Days a week" id="plan-days">
-            <Input
-              id="plan-days"
-              type="number"
-              min={1}
-              max={7}
-              value={days}
-              onChange={(e) => setDays(Number(e.target.value))}
-            />
-          </Field>
-          <Field label="Target score %" id="plan-target">
-            <Input
-              id="plan-target"
-              type="number"
-              min={50}
-              max={100}
-              value={target}
-              onChange={(e) => setTarget(Number(e.target.value))}
-            />
-          </Field>
-        </div>
-        <Button disabled={busy || !profile?.exam_date} onClick={() => void savePlan()}>
-          {busy ? "Saving…" : current ? "Update plan" : "Create plan"}
-        </Button>
-      </Card>
-    </div>
-  );
-}
+              Save date
+            </Button>
+          </div>
+        </Section>
 
-function Field({ label, id, children }: { label: string; id: string; children: React.ReactNode }) {
-  return (
-    <div className="space-y-1">
-      <Label htmlFor={id}>{label}</Label>
-      {children}
+        <Section
+          title={current ? "Change your plan" : "Make a study plan"}
+          description={`Your weakest topics are spread across the weeks.${!profile?.exam_date ? " Set your exam date first." : ""}`}
+        >
+          <form
+            noValidate
+            className="flex flex-col gap-4"
+            onSubmit={(event) => {
+              event.preventDefault();
+              savePlan();
+            }}
+          >
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <Field label="Exam">
+                {(control) => (
+                  <Select
+                    value={examType}
+                    onValueChange={(v) => setExamType(v === "RM" ? "RM" : "RN")}
+                  >
+                    <SelectTrigger {...control}>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="RN">RN, Registered Nurse</SelectItem>
+                      <SelectItem value="RM">RM, Registered Midwife</SelectItem>
+                    </SelectContent>
+                  </Select>
+                )}
+              </Field>
+              <Field
+                label="Minutes a day"
+                hint={`${PLAN_LIMITS.dailyMinutes.min} to ${PLAN_LIMITS.dailyMinutes.max}`}
+                error={errors.dailyMinutes}
+              >
+                {(control) => (
+                  <Input
+                    {...control}
+                    ref={fields.dailyMinutes}
+                    type="number"
+                    inputMode="numeric"
+                    value={Number.isNaN(daily) ? "" : daily}
+                    onChange={(e) => setDaily(e.target.valueAsNumber)}
+                  />
+                )}
+              </Field>
+              <Field
+                label="Days a week"
+                hint={`${PLAN_LIMITS.daysPerWeek.min} to ${PLAN_LIMITS.daysPerWeek.max}`}
+                error={errors.daysPerWeek}
+              >
+                {(control) => (
+                  <Input
+                    {...control}
+                    ref={fields.daysPerWeek}
+                    type="number"
+                    inputMode="numeric"
+                    value={Number.isNaN(days) ? "" : days}
+                    onChange={(e) => setDays(e.target.valueAsNumber)}
+                  />
+                )}
+              </Field>
+              <Field
+                label="Target score (%)"
+                hint={`${PLAN_LIMITS.targetScore.min} to ${PLAN_LIMITS.targetScore.max}`}
+                error={errors.targetScore}
+              >
+                {(control) => (
+                  <Input
+                    {...control}
+                    ref={fields.targetScore}
+                    type="number"
+                    inputMode="numeric"
+                    value={Number.isNaN(target) ? "" : target}
+                    onChange={(e) => setTarget(e.target.valueAsNumber)}
+                  />
+                )}
+              </Field>
+            </div>
+            <div>
+              <Button type="submit" loading={busy === "plan"} disabled={!profile?.exam_date}>
+                {current ? "Update plan" : "Create plan"}
+              </Button>
+            </div>
+          </form>
+        </Section>
+      </div>
     </div>
   );
 }

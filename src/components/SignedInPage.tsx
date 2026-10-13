@@ -1,6 +1,6 @@
-import { useNavigate } from "@tanstack/react-router";
-import { useEffect, type ReactNode } from "react";
-import { AppHeader } from "@/components/AppHeader";
+import type { ReactNode } from "react";
+import { PageHeader } from "@/components/app/PageHeader";
+import { Skeleton } from "@/components/ui/skeleton";
 import { useAuth } from "@/hooks/use-auth";
 
 interface Props {
@@ -9,30 +9,26 @@ interface Props {
   children: (userId: string) => ReactNode;
 }
 
-/** The frame every signed-in student screen shares: header, sign-in redirect, title, centred column. */
+/**
+ * The body of a signed-in page: its title, then the content once the account has loaded. The frame
+ * around it (navigation, sign-in and onboarding redirects) is the `_app` layout's job, so a page
+ * cannot forget it.
+ */
 export function SignedInPage({ title, description, children }: Props) {
-  const { user, profile, loading } = useAuth();
-  const navigate = useNavigate();
-
-  useEffect(() => {
-    if (!loading && !user) navigate({ to: "/auth" });
-    else if (!loading && user && profile && !profile.onboarded) navigate({ to: "/onboarding" });
-  }, [loading, user, profile, navigate]);
-
+  const { user, profile } = useAuth();
   return (
-    <>
-      <AppHeader />
-      <main className="container mx-auto px-4 py-8 max-w-3xl">
-        <h1 className="text-3xl font-bold">{title}</h1>
-        {description && <p className="text-muted-foreground text-sm mt-1">{description}</p>}
-        <div className="mt-6 space-y-4">
-          {user && profile ? (
-            children(user.id)
-          ) : (
-            <p className="p-12 text-center text-muted-foreground">Loading…</p>
-          )}
-        </div>
-      </main>
-    </>
+    <div className="mx-auto w-full max-w-4xl">
+      <PageHeader title={title} description={description} />
+      <div className="flex flex-col gap-4">
+        {user && profile ? (
+          children(user.id)
+        ) : (
+          <div aria-busy="true" className="flex flex-col gap-3">
+            <Skeleton className="h-24 w-full" />
+            <Skeleton className="h-24 w-full" />
+          </div>
+        )}
+      </div>
+    </div>
   );
 }

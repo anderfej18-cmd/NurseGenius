@@ -1,4 +1,10 @@
-import { ConflictError, LimitReachedError, NotFoundError, ValidationError } from "./errors";
+import {
+  ConflictError,
+  ForbiddenError,
+  LimitReachedError,
+  NotFoundError,
+  ValidationError,
+} from "./errors";
 
 interface DbError {
   message: string;
@@ -42,8 +48,38 @@ const NAMED_EXCEPTIONS: ReadonlyArray<
   ["attempt_not_found", () => new NotFoundError("Attempt not found.")],
   ["attempt_closed", () => new ConflictError("This test has already been submitted.")],
   ["answers_not_in_test", () => new ValidationError("An answer does not belong to this test.")],
-  ["test_not_found", () => new NotFoundError("Test not found or not owned by you.")],
+  ["test_not_found", () => new NotFoundError("This test could not be found.")],
   ["invalid_topic", () => new ValidationError("Enter a subcategory.")],
+  ["test_not_started", () => new ConflictError("This test has not started yet.")],
+  ["test_closed", () => new NotFoundError("This test link has expired or does not exist.")],
+  ["test_empty", () => new ValidationError("This test has no questions.")],
+  [
+    "attempt_expired",
+    () => new ConflictError("Your time is up. Your saved answers will be scored."),
+  ],
+  ["invalid_schedule", () => new ValidationError("Check the start time, end time and duration.")],
+  [
+    "allocation_exceeds_pool",
+    (message) => {
+      const found = /allocation_exceeds_pool:([^:]{1,200}):(\d{1,9})/.exec(message);
+      return new ValidationError(
+        found === null
+          ? "A chosen subcategory has fewer eligible questions than you asked for."
+          : `Only ${found[2]} eligible questions are available in “${found[1]}”.`,
+      );
+    },
+  ],
+  ["not_authorized", () => new ForbiddenError("You are not authorized to do this.")],
+  ["question_not_found", () => new NotFoundError("Question not found.")],
+  [
+    "question_in_use",
+    (message) => {
+      const answers = /question_in_use:(\d{1,9})/.exec(message)?.[1] ?? "some";
+      return new ConflictError(
+        `${answers} student answers use this question, so it cannot be deleted. Retire it instead.`,
+      );
+    },
+  ],
   [
     "too_few_answered",
     (message) => {

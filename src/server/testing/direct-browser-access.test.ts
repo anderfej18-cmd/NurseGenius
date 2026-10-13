@@ -125,12 +125,15 @@ describe("plans and payments (Upgrade page, Pricing and Upgrades tabs)", () => {
     expect(rows).toEqual([{ reference: "ref-alice" }]);
   });
 
-  it("shows an admin every payment", async () => {
-    const rows = await asUser(subAdmin, `SELECT reference FROM public.subscription_payments`);
+  it("shows the central admin every payment, and a sub-admin none (student data is the central admin's)", async () => {
+    const rows = await asUser(central, `SELECT reference FROM public.subscription_payments`);
     expect(rows.map((row) => (row as { reference: string }).reference).sort()).toEqual([
       "ref-alice",
       "ref-bob",
     ]);
+    expect(await asUser(subAdmin, `SELECT reference FROM public.subscription_payments`)).toEqual(
+      [],
+    );
   });
 
   it("refuses a student who tries to write a payment, so a plan cannot be 'bought' from the browser", async () => {

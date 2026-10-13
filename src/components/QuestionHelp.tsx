@@ -1,5 +1,7 @@
-import { Loader2, Sparkles } from "lucide-react";
+import { Sparkles } from "lucide-react";
 import { useState } from "react";
+import { Alert } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -67,19 +69,21 @@ export function QuestionHelp({ where, questionId, answeredWrong, rationale }: Pr
   };
 
   return (
-    <div className="mt-3 space-y-2">
+    <div className="flex flex-col gap-3 rounded-md border bg-sunken p-4">
       <div className="flex flex-wrap items-center gap-2">
-        <Sparkles className="h-4 w-4 text-primary" aria-hidden />
-        <span className="text-xs font-semibold uppercase text-muted-foreground">AI help</span>
+        <span className="flex items-center gap-1.5 text-sm font-medium">
+          <Sparkles aria-hidden="true" className="size-4 text-primary" />
+          Ask the AI tutor
+        </span>
         {helpChoicesFor(answeredWrong).map((choice) => (
           <Button
             key={choice.intent}
             size="sm"
             variant="outline"
             disabled={loading !== null}
+            loading={loading === choice.intent}
             onClick={() => void ask(choice.intent, choice.label)}
           >
-            {loading === choice.intent && <Loader2 className="h-4 w-4 mr-1 animate-spin" />}
             {choice.label}
           </Button>
         ))}
@@ -88,35 +92,32 @@ export function QuestionHelp({ where, questionId, answeredWrong, rationale }: Pr
         <Input
           value={followUp}
           maxLength={FOLLOW_UP_MAX + 50}
-          placeholder="Ask a question about this one…"
+          placeholder="Ask your own question about this one"
           aria-label="Ask a follow-up question about this question"
           onChange={(event) => setFollowUp(event.target.value)}
           onKeyDown={(event) => event.key === "Enter" && sendFollowUp()}
         />
         <Button
-          size="sm"
           disabled={loading !== null || followUp.trim() === ""}
+          loading={loading === "follow_up"}
           onClick={sendFollowUp}
         >
-          {loading === "follow_up" ? "Thinking…" : "Ask"}
+          Ask
         </Button>
       </div>
       {problem && (
-        <div className="text-sm space-y-1" role="alert">
-          <p className="text-destructive">{problem}</p>
-          {rationale && (
-            <p className="text-muted-foreground">
-              The official explanation above is still available.
-            </p>
-          )}
-        </div>
+        <Alert variant="destructive">
+          <p>{problem}</p>
+          {rationale && <p>The official explanation above is still available.</p>}
+        </Alert>
       )}
       {answers.map((answer, index) => (
-        <div key={index} className="p-3 rounded bg-primary/10 border border-primary/20 text-sm">
-          <p className="font-semibold text-xs uppercase text-primary mb-1">
-            AI-assisted · {answer.label}
-          </p>
-          <p className="whitespace-pre-wrap">{answer.text}</p>
+        <div key={index} className="flex flex-col gap-2 rounded-md border bg-card p-4 text-sm">
+          <Badge variant="info" className="w-fit">
+            AI-assisted
+          </Badge>
+          <p className="font-medium">{answer.label}</p>
+          <p className="whitespace-pre-wrap leading-relaxed">{answer.text}</p>
         </div>
       ))}
       {answers.length > 0 && (

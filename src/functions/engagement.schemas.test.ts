@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { PLAN_LIMITS } from "../lib/plan-form";
 import { STUDY_PLAN_CONFIG } from "../server/engagement/plans/study-plan.config";
 import {
   dailyChallengeSchema,
@@ -97,5 +98,17 @@ describe("examDateSchema", () => {
     [{ examDate: "2026-12-01", userId: "someone-else" }],
   ])("rejects %j", (payload) => {
     expect(examDateSchema.safeParse(payload).success).toBe(false);
+  });
+});
+
+describe("the study plan form's ranges", () => {
+  it("are the same as studyPlanSchema's, so the form never promises what the server refuses", () => {
+    for (const field of Object.keys(PLAN_LIMITS) as (keyof typeof PLAN_LIMITS)[]) {
+      const { min, max } = PLAN_LIMITS[field];
+      expect(studyPlanSchema.safeParse({ [field]: min }).success).toBe(true);
+      expect(studyPlanSchema.safeParse({ [field]: max }).success).toBe(true);
+      expect(studyPlanSchema.safeParse({ [field]: min - 1 }).success).toBe(false);
+      expect(studyPlanSchema.safeParse({ [field]: max + 1 }).success).toBe(false);
+    }
   });
 });

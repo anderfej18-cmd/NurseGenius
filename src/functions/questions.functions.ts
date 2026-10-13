@@ -87,6 +87,16 @@ export const adminRetireQuestion = createServerFn({ method: "POST" })
     return questionAdminController.retire(context, data);
   });
 
+/** Deletes a question for good (audited). Refused when students have answered it: retire it instead. */
+export const adminDeleteQuestion = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .validator(validated(questionIdSchema))
+  .handler(async ({ data, context }) => {
+    const { questionAdminController } =
+      await import("@/server/questions/question-admin.controller.server");
+    return questionAdminController.delete(context, data);
+  });
+
 /** Puts a retired question back in use. */
 export const adminRestoreQuestion = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])

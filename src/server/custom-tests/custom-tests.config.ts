@@ -6,6 +6,8 @@ export const CUSTOM_TEST_CONFIG = {
   maxDurationMinutes: 180,
   /** A shared test is "passed" at this score; mirrored by the database summaries. */
   maxAttemptsListed: 100,
+  /** The longest a link may stay open, from its start to its end. */
+  maxWindowDays: 90,
   limits: {
     /** Attempts one caller address may start, across all tests. */
     startPerAddress: { limit: 20, windowSeconds: 3600 },
@@ -13,5 +15,8 @@ export const CUSTOM_TEST_CONFIG = {
     startPerEmailAndTest: { limit: 5, windowSeconds: 86_400 },
     submitPerAddress: { limit: 30, windowSeconds: 3600 },
     viewPerAddress: { limit: 60, windowSeconds: 60 },
+    /** Answer saves one attempt may make (250 questions, several changes each). */
+    savePerAttempt: { limit: 3000, windowSeconds: 3600 },
+    resumePerAddress: { limit: 120, windowSeconds: 60 },
   },
 } as const;

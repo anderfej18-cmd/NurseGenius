@@ -11,6 +11,51 @@
 --   * legacy abandoned sessions the migration finalised: they stay completed, with a score computed
 --     from their saved answers and completed_at = their deadline.
 
+-- ===== Live tests, 2026-10-12 =====
+-- Schedules, stored links and saved answers go; tests are live from creation to expiry again. Earlier in this
+-- script the milestone's own shared-test functions are dropped, so nothing here needs to put them back.
+DROP FUNCTION IF EXISTS public.import_live_test_questions(uuid, uuid, public.exam_type, text);
+DROP FUNCTION IF EXISTS public.list_test_attempts(uuid, uuid[]);
+DROP FUNCTION IF EXISTS public.list_live_tests(uuid);
+DROP FUNCTION IF EXISTS public.get_shared_attempt(uuid, text);
+DROP FUNCTION IF EXISTS public.save_shared_answer(uuid, text, uuid, text, boolean);
+DROP FUNCTION IF EXISTS public.start_shared_attempt(text, text, text);
+DROP FUNCTION IF EXISTS public.get_shared_test_state(text);
+DROP FUNCTION IF EXISTS public.republish_live_test(uuid, uuid, text, text, timestamptz, timestamptz, integer);
+DROP FUNCTION IF EXISTS public.create_live_test(uuid, text, text, public.exam_type, text, integer, timestamptz, timestamptz, text, text, jsonb, jsonb);
+DROP FUNCTION IF EXISTS app_private.close_overdue_attempts(uuid[]);
+DROP FUNCTION IF EXISTS app_private.attempt_result(uuid);
+DROP FUNCTION IF EXISTS app_private.finish_attempt(uuid, jsonb);
+DROP FUNCTION IF EXISTS app_private.is_test_manager(uuid, uuid);
+DROP FUNCTION IF EXISTS app_private.question_is_complete(public.questions);
+DROP FUNCTION IF EXISTS app_private.shared_grace();
+ALTER TABLE public.custom_test_attempt_answers DROP COLUMN IF EXISTS flagged;
+ALTER TABLE public.custom_tests DROP CONSTRAINT IF EXISTS custom_tests_window_check;
+ALTER TABLE public.custom_tests DROP COLUMN IF EXISTS share_token, DROP COLUMN IF EXISTS starts_at;
+GRANT SELECT ON public.custom_tests TO anon, authenticated;
+
+-- ===== Admin privacy and question audit, 2026-10-12 =====
+-- Any admin (sub-admins too) may read student exams, payments, receipts and attempt emails again.
+DROP FUNCTION IF EXISTS public.admin_delete_question(uuid, uuid);
+DROP TABLE IF EXISTS public.admin_audit_log;
+DROP POLICY IF EXISTS "central admin reads exams" ON public.exams;
+CREATE POLICY "admins read exams" ON public.exams FOR SELECT TO authenticated USING (public.is_any_admin(auth.uid()));
+DROP POLICY IF EXISTS "users view own payments or central admin" ON public.subscription_payments;
+CREATE POLICY "users view own payments or admins view all" ON public.subscription_payments
+  FOR SELECT TO authenticated USING (user_id = auth.uid() OR public.is_any_admin(auth.uid()));
+DROP POLICY IF EXISTS "users view own receipts or central admin" ON public.payment_receipts;
+CREATE POLICY "users view own receipts" ON public.payment_receipts
+  FOR SELECT TO authenticated USING (user_id = auth.uid() OR public.is_any_admin(auth.uid()));
+DROP POLICY IF EXISTS "central admin updates receipts" ON public.payment_receipts;
+CREATE POLICY "admins update receipts" ON public.payment_receipts FOR UPDATE TO authenticated USING (public.is_any_admin(auth.uid()));
+DROP POLICY IF EXISTS "users view own attempts or central admin" ON public.custom_test_attempts;
+CREATE POLICY "Users view their custom test attempts" ON public.custom_test_attempts
+  FOR SELECT TO authenticated USING (user_id = auth.uid() OR app_private.is_any_admin(auth.uid()));
+DROP POLICY IF EXISTS "users view own attempt answers or central admin" ON public.custom_test_attempt_answers;
+CREATE POLICY "Users view their custom test answers" ON public.custom_test_attempt_answers
+  FOR SELECT TO authenticated USING (EXISTS (SELECT 1 FROM public.custom_test_attempts a
+    WHERE a.id = attempt_id AND (a.user_id = auth.uid() OR app_private.is_any_admin(auth.uid()))));
+
 -- ===== Fix pass, 2026-10-09 (newest first) =====
 -- selection reasons: the column and its function go
 DROP FUNCTION IF EXISTS public.record_selection_reasons(uuid, uuid, jsonb);

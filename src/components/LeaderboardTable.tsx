@@ -1,7 +1,12 @@
 import { useEffect, useState } from "react";
-import { getLeaderboard } from "@/functions/leaderboard.functions";
-import { Card } from "@/components/ui/card";
+import { Trophy } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { EmptyState } from "@/components/ui/empty";
+import { Skeleton } from "@/components/ui/skeleton";
+import { getLeaderboard } from "@/functions/leaderboard.functions";
+import { cn } from "@/lib/utils";
 
 type Board = Awaited<ReturnType<typeof getLeaderboard>>;
 export type LeaderboardPeriod = Board["period"];
@@ -17,18 +22,28 @@ interface Props {
 
 const REFRESH_MS = 30_000;
 
+/**
+ * The ranked students for a period, as a real table so a screen reader can move by row and column. The
+ * database ranks and bounds the rows; this only shows them. The student's own row says "You" in words,
+ * not only with a tint. If a refresh fails the last board stays on screen and the next refresh tries again.
+ */
 export function LeaderboardTable({ period, showActiveDays, emptyMessage, liveShuffle }: Props) {
   const [rows, setRows] = useState<Row[]>([]);
   const [loaded, setLoaded] = useState(false);
+  const [failed, setFailed] = useState(false);
+  const [attempt, setAttempt] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
     const load = async () => {
       try {
         const board = await getLeaderboard({ data: { period } });
-        if (!cancelled) setRows(board.entries);
+        if (!cancelled) {
+          setRows(board.entries);
+          setFailed(false);
+        }
       } catch {
-        // keep showing the last board; the next refresh tries again
+        if (!cancelled) setFailed(true);
       }
       if (!cancelled) setLoaded(true);
     };
@@ -41,69 +56,107 @@ export function LeaderboardTable({ period, showActiveDays, emptyMessage, liveShu
       cancelled = true;
       clearInterval(timer);
     };
-  }, [period, liveShuffle]);
+  }, [period, liveShuffle, attempt]);
+
+  if (!loaded)
+    return (
+      <div aria-busy="true" className="flex flex-col gap-2">
+        <Skeleton className="h-12 w-full" />
+        <Skeleton className="h-12 w-full" />
+        <Skeleton className="h-12 w-full" />
+      </div>
+    );
+
+  if (rows.length === 0 && failed)
+    return (
+      <EmptyState
+        title="The leaderboard could not be loaded"
+        description="Check your connection and try again."
+        action={<Button onClick={() => setAttempt((n) => n + 1)}>Try again</Button>}
+      />
+    );
+
+  if (rows.length === 0)
+    return (
+      <EmptyState
+        icon={Trophy}
+        title="No qualifiers yet"
+        description={emptyMessage ?? "Attempt 100 or more questions to appear on the board."}
+      />
+    );
 
   return (
-    <Card className="p-2">
-      {!loaded && <p className="p-6 text-center text-muted-foreground text-sm">Loading…</p>}
-      {loaded && rows.length === 0 && (
-        <p className="p-6 text-center text-muted-foreground text-sm">
-          {emptyMessage ?? "No qualifiers yet. Attempt 100+ questions to appear on the board."}
-        </p>
-      )}
-      {rows.length > 0 && (
-        <div className="divide-y">
-          <div
-            className={`grid gap-2 px-3 py-2 text-xs uppercase text-muted-foreground font-medium ${showActiveDays ? "grid-cols-13" : "grid-cols-12"}`}
-            style={
-              showActiveDays
-                ? { gridTemplateColumns: "auto 3fr 1fr 1fr 1fr 1fr" }
-                : { gridTemplateColumns: "auto 3fr 1fr 1fr 1fr" }
-            }
-          >
-            <div>#</div>
-            <div>Name</div>
-            <div className="text-right">Avg %</div>
-            <div className="text-right">Attempted</div>
-            <div className="text-right">Correct</div>
-            {showActiveDays && <div className="text-right">Days</div>}
-          </div>
-          {rows.map((r, i) => (
-            <div
-              key={r.rank}
-              className={`grid gap-2 items-center px-3 py-3 text-sm transition-all ${r.isYou ? "bg-primary/10 rounded" : ""}`}
-              style={
-                showActiveDays
-                  ? { gridTemplateColumns: "auto 3fr 1fr 1fr 1fr 1fr" }
-                  : { gridTemplateColumns: "auto 3fr 1fr 1fr 1fr" }
-              }
+    <Card className="overflow-x-auto">
+      <table className="w-full text-sm">
+        <caption className="sr-only">
+          {period === "daily" ? "Today's ranking" : "This week's ranking"}
+        </caption>
+        <thead>
+          <tr className="border-b border-divider text-left text-xs text-muted-foreground">
+            <th scope="col" className="w-14 px-4 py-3 font-medium">
+              Rank
+            </th>
+            <th scope="col" className="px-2 py-3 font-medium">
+              Name
+            </th>
+            <th scope="col" className="px-2 py-3 text-right font-medium">
+              Average
+            </th>
+            <th scope="col" className="px-2 py-3 text-right font-medium max-sm:hidden">
+              Attempted
+            </th>
+            <th scope="col" className="px-2 py-3 text-right font-medium max-sm:hidden">
+              Correct
+            </th>
+            {showActiveDays && (
+              <th scope="col" className="px-2 py-3 text-right font-medium">
+                Days
+              </th>
+            )}
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((row, index) => (
+            <tr
+              key={row.rank}
+              className={cn("border-b border-divider last:border-0", row.isYou && "bg-accent")}
             >
-              <div>
+              <td className="px-4 py-3">
                 <span
-                  className={`w-7 h-7 rounded-full flex items-center justify-center font-bold text-xs ${
-                    i === 0
-                      ? "bg-warning text-warning-foreground"
-                      : i === 1
-                        ? "bg-muted-foreground text-background"
-                        : i === 2
-                          ? "bg-accent-foreground/70 text-background"
-                          : "bg-muted text-foreground"
-                  }`}
+                  className={cn(
+                    "flex size-7 items-center justify-center rounded-full text-xs font-semibold tabular-nums",
+                    index < 3 ? "bg-mark text-mark-foreground" : "bg-muted text-foreground",
+                  )}
                 >
-                  {r.rank}
+                  {row.rank}
                 </span>
-              </div>
-              <div className="font-medium truncate">{r.username}</div>
-              <div className="text-right">
-                <Badge className="bg-hero text-primary-foreground">{r.avgScore.toFixed(1)}%</Badge>
-              </div>
-              <div className="text-right">{r.attempted}</div>
-              <div className="text-right">{r.correct}</div>
-              {showActiveDays && <div className="text-right">{r.activeDays ?? "—"}/7</div>}
-            </div>
+              </td>
+              <td className="max-w-0 px-2 py-3">
+                <span className="flex items-center gap-2">
+                  <span className="min-w-0 truncate font-medium">{row.username}</span>
+                  {row.isYou && (
+                    <Badge variant="secondary" className="shrink-0 max-sm:hidden">
+                      You
+                    </Badge>
+                  )}
+                </span>
+                <span className="block text-xs text-muted-foreground sm:hidden">
+                  {row.isYou && "You · "}
+                  {row.attempted} attempted · {row.correct} correct
+                </span>
+              </td>
+              <td className="px-2 py-3 text-right font-semibold tabular-nums">
+                {row.avgScore.toFixed(1)}%
+              </td>
+              <td className="px-2 py-3 text-right tabular-nums max-sm:hidden">{row.attempted}</td>
+              <td className="px-2 py-3 text-right tabular-nums max-sm:hidden">{row.correct}</td>
+              {showActiveDays && (
+                <td className="px-2 py-3 text-right tabular-nums">{row.activeDays ?? "—"}/7</td>
+              )}
+            </tr>
           ))}
-        </div>
-      )}
+        </tbody>
+      </table>
     </Card>
   );
 }

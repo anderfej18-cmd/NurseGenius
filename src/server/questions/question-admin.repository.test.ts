@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { ConflictError } from "../errors";
+import { ConflictError, NotFoundError } from "../errors";
 import { createFakeSupabase } from "../testing/fake-supabase";
 import type { NewQuestionRow } from "./question-admin.service";
 import { SupabaseQuestionAdminStore } from "./question-admin.repository.server";
@@ -57,6 +57,26 @@ describe("SupabaseQuestionAdminStore questions", () => {
     expect(callsOn(fake, "from:questions", "update")).toEqual([[{ status: "retired" }]]);
     expect(callsOn(fake, "from:questions", "eq")).toEqual([["id", ID]]);
     expect(fake.callsOn("from:questions", "delete")).toEqual([]);
+  });
+
+  it("deletes through the audited database function, naming the admin", async () => {
+    const fake = createFakeSupabase([{ data: null }]);
+    await new SupabaseQuestionAdminStore(fake.client).deleteForever("admin-1", ID);
+    expect(callsOn(fake, "rpc:admin_delete_question", "args")).toEqual([
+      [{ _admin_id: "admin-1", _question_id: ID }],
+    ]);
+    expect(fake.callsOn("from:questions", "delete")).toEqual([]);
+  });
+
+  it("turns the database's named refusals into typed errors", async () => {
+    const missing = createFakeSupabase([{ error: { message: "question_not_found" } }]);
+    await expect(
+      new SupabaseQuestionAdminStore(missing.client).deleteForever("admin-1", ID),
+    ).rejects.toBeInstanceOf(NotFoundError);
+    const used = createFakeSupabase([{ error: { message: "question_in_use:3" } }]);
+    await expect(
+      new SupabaseQuestionAdminStore(used.client).deleteForever("admin-1", ID),
+    ).rejects.toThrow(/3 student answers/);
   });
 
   it("reads the exam type and topic of a question, or null", async () => {

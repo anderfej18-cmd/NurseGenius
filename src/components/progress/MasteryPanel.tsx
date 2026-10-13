@@ -1,8 +1,10 @@
 import { useState } from "react";
+import { LoadFailed } from "@/components/app/LoadFailed";
+import { Section } from "@/components/app/Section";
+import { MeterList } from "@/components/charts/MeterList";
 import { InsightCard } from "@/components/InsightCard";
 import { Badge } from "@/components/ui/badge";
-import { Card } from "@/components/ui/card";
-import { Progress } from "@/components/ui/progress";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   getConfidenceAnalytics,
@@ -25,24 +27,28 @@ export function MasteryPanel() {
   const time = useServerData(() => getTimeAnalytics({ data: {} }), []);
 
   const report = readiness.data;
+  const overall = confidence.data?.overall;
   return (
-    <div className="space-y-4">
-      <Card className="p-5 space-y-3">
-        <div className="flex items-center justify-between gap-3">
-          <h2 className="font-semibold">Exam readiness</h2>
+    <div className="flex flex-col gap-6">
+      <Section
+        title="Exam readiness"
+        description="An estimate from your own practice. It is not a prediction of your exam result."
+        actions={
           <Tabs value={examType} onValueChange={(v) => setExamType(v === "RM" ? "RM" : "RN")}>
-            <TabsList>
+            <TabsList aria-label="Programme">
               <TabsTrigger value="RN">RN</TabsTrigger>
               <TabsTrigger value="RM">RM</TabsTrigger>
             </TabsList>
           </Tabs>
-        </div>
-        {readiness.error && <p className="text-destructive text-sm">{readiness.error}</p>}
+        }
+      >
+        {readiness.error && !report && <LoadFailed load={readiness} label="Your readiness" />}
+        {readiness.loading && !report && !readiness.error && <Skeleton className="h-28 w-full" />}
         {report && (
           <>
-            <div className="flex items-baseline gap-3">
-              <span className="text-4xl font-bold">
-                {report.readinessScore === null ? "—" : Math.round(report.readinessScore)}
+            <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1">
+              <span className="font-sans text-5xl font-semibold leading-none">
+                {report.readinessScore === null ? "Not yet" : Math.round(report.readinessScore)}
               </span>
               <Badge variant="secondary">{readinessBandText(report.band)}</Badge>
             </div>
@@ -57,11 +63,13 @@ export function MasteryPanel() {
                 {report.weakTopics.map((topic) => topic.topic).join(", ")}
               </p>
             )}
-            {report.recommendations.map((item) => (
-              <p key={item.component} className="text-sm text-muted-foreground">
-                {item.message}
-              </p>
-            ))}
+            {report.recommendations.length > 0 && (
+              <ul className="flex flex-col gap-1 text-sm text-muted-foreground">
+                {report.recommendations.map((item) => (
+                  <li key={item.component}>{item.message}</li>
+                ))}
+              </ul>
+            )}
             <p className="text-xs text-muted-foreground">{report.notice}</p>
             {report.history && (
               <p className="text-xs text-muted-foreground">
@@ -76,73 +84,92 @@ export function MasteryPanel() {
             <InsightCard kind="readiness" examType={examType} />
           </>
         )}
-      </Card>
+      </Section>
 
-      <Card className="p-5 space-y-3">
-        <h2 className="font-semibold">Mastery by topic</h2>
-        {mastery.error && <p className="text-destructive text-sm">{mastery.error}</p>}
+      <Section
+        title="Mastery by topic"
+        description="From 0 to 100. A few correct answers do not make a topic mastered: scores stay near the middle until there is enough evidence."
+      >
+        {mastery.error && !mastery.data && <LoadFailed load={mastery} label="Your topics" />}
+        {mastery.loading && !mastery.data && !mastery.error && <Skeleton className="h-40 w-full" />}
         {mastery.data?.topics.length === 0 && (
           <p className="text-sm text-muted-foreground">
             Finish a test to see how you are doing by topic.
           </p>
         )}
-        {mastery.data?.topics.map((topic) => (
-          <div key={topic.topic} className="space-y-1">
-            <div className="flex items-center justify-between gap-2 text-sm">
-              <span className="font-medium">{topic.topic}</span>
-              <span className="text-muted-foreground">
-                {masteryLevelText(topic.level)} · {topic.attempts} answered
-              </span>
-            </div>
-            <Progress
-              value={topic.score}
-              aria-label={`${topic.topic} mastery ${Math.round(topic.score)} out of 100`}
-            />
-          </div>
-        ))}
-        <p className="text-xs text-muted-foreground">
-          A few correct answers do not make a topic mastered: scores stay near the middle until
-          there is enough evidence.
-        </p>
-      </Card>
-
-      <Card className="p-5 space-y-2">
-        <h2 className="font-semibold">How sure you are</h2>
-        {confidence.error && <p className="text-destructive text-sm">{confidence.error}</p>}
-        {confidence.data && confidence.data.overall.rated === 0 ? (
-          <p className="text-sm text-muted-foreground">
-            Tell us how sure you are as you answer, and this will show where you are guessing or
-            overconfident.
-          </p>
-        ) : (
-          confidence.data && (
-            <ul className="text-sm space-y-1">
-              <li>Sure and right: {confidence.data.overall.correctHigh}</li>
-              <li>Sure but wrong: {confidence.data.overall.wrongHigh}</li>
-              <li>Unsure but right: {confidence.data.overall.correctLow}</li>
-              <li>Unsure and wrong: {confidence.data.overall.wrongLow}</li>
-            </ul>
-          )
+        {mastery.data && mastery.data.topics.length > 0 && (
+          <MeterList
+            label="Mastery by topic"
+            rows={[...mastery.data.topics]
+              .sort((a, b) => a.score - b.score || a.topic.localeCompare(b.topic))
+              .map((topic) => ({
+                key: topic.topic,
+                label: topic.topic,
+                value: topic.score,
+                valueText: String(Math.round(topic.score)),
+                status: masteryLevelText(topic.level),
+                note: `${topic.attempts} answered`,
+              }))}
+          />
         )}
-      </Card>
+      </Section>
 
-      <Card className="p-5 space-y-2">
-        <h2 className="font-semibold">Your pace</h2>
-        {time.error && <p className="text-destructive text-sm">{time.error}</p>}
-        {time.data?.overall ? (
-          <p className="text-sm">
-            About {Math.round(time.data.overall.medianMs / 1000)} seconds a question (median of{" "}
-            {time.data.overall.count} timed answers).
-          </p>
-        ) : (
-          <p className="text-sm text-muted-foreground">Finish a test to see your pace.</p>
-        )}
-        {time.data?.insights.map((insight) => (
-          <p key={insight.code} className="text-sm text-muted-foreground">
-            {insight.message}
-          </p>
-        ))}
-      </Card>
+      <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+        <Section title="How sure you are">
+          {confidence.error && !confidence.data && (
+            <LoadFailed load={confidence} label="Your confidence" />
+          )}
+          {confidence.loading && !confidence.data && !confidence.error && (
+            <Skeleton className="h-24 w-full" />
+          )}
+          {overall && overall.rated === 0 && (
+            <p className="text-sm text-muted-foreground">
+              Tell us how sure you are as you answer, and this will show where you are guessing or
+              overconfident.
+            </p>
+          )}
+          {overall && overall.rated > 0 && (
+            <dl className="grid grid-cols-2 gap-3">
+              {(
+                [
+                  ["Sure and right", overall.correctHigh],
+                  ["Sure but wrong", overall.wrongHigh],
+                  ["Unsure but right", overall.correctLow],
+                  ["Unsure and wrong", overall.wrongLow],
+                ] as const
+              ).map(([label, count]) => (
+                <div key={label} className="rounded-lg bg-sunken p-3">
+                  <dt className="text-xs text-muted-foreground">{label}</dt>
+                  <dd className="font-sans text-2xl font-semibold tabular-nums">{count}</dd>
+                </div>
+              ))}
+            </dl>
+          )}
+        </Section>
+
+        <Section title="Your pace">
+          {time.error && !time.data && <LoadFailed load={time} label="Your pace" />}
+          {time.loading && !time.data && !time.error && <Skeleton className="h-24 w-full" />}
+          {time.data?.overall ? (
+            <p className="text-sm">
+              About{" "}
+              <span className="font-sans text-2xl font-semibold">
+                {Math.round(time.data.overall.medianMs / 1000)}
+              </span>{" "}
+              seconds a question (median of {time.data.overall.count} timed answers).
+            </p>
+          ) : (
+            time.data && (
+              <p className="text-sm text-muted-foreground">Finish a test to see your pace.</p>
+            )
+          )}
+          {time.data?.insights.map((insight) => (
+            <p key={insight.code} className="text-sm text-muted-foreground">
+              {insight.message}
+            </p>
+          ))}
+        </Section>
+      </div>
     </div>
   );
 }

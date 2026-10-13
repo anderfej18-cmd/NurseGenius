@@ -10,50 +10,40 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as AchievementsRouteImport } from './routes/achievements'
-import { Route as AdminRouteImport } from './routes/admin'
-import { Route as AnalysisRouteImport } from './routes/analysis'
+import { Route as AppRouteImport } from './routes/_app'
 import { Route as AuthRouteImport } from './routes/auth'
-import { Route as BookmarksRouteImport } from './routes/bookmarks'
-import { Route as DashboardRouteImport } from './routes/dashboard'
-import { Route as FriendsRouteImport } from './routes/friends'
-import { Route as HistoryRouteImport } from './routes/history'
-import { Route as LeaderboardRouteImport } from './routes/leaderboard'
-import { Route as MasteryRouteImport } from './routes/mastery'
-import { Route as MistakesRouteImport } from './routes/mistakes'
-import { Route as NotificationsRouteImport } from './routes/notifications'
 import { Route as OnboardingRouteImport } from './routes/onboarding'
-import { Route as PaymentsRouteImport } from './routes/payments'
-import { Route as PlanRouteImport } from './routes/plan'
-import { Route as ProfileRouteImport } from './routes/profile'
 import { Route as ProgressRouteImport } from './routes/progress'
-import { Route as TodayRouteImport } from './routes/today'
-import { Route as TopicsRouteImport } from './routes/topics'
+import { Route as AppAchievementsRouteImport } from './routes/_app/achievements'
+import { Route as AppAdminRouteImport } from './routes/_app/admin'
+import { Route as AppAnalysisRouteImport } from './routes/_app/analysis'
+import { Route as AppBookmarksRouteImport } from './routes/_app/bookmarks'
+import { Route as AppDashboardRouteImport } from './routes/_app/dashboard'
+import { Route as AppFriendsRouteImport } from './routes/_app/friends'
+import { Route as AppHistoryRouteImport } from './routes/_app/history'
+import { Route as AppLeaderboardRouteImport } from './routes/_app/leaderboard'
+import { Route as AppMasteryRouteImport } from './routes/_app/mastery'
+import { Route as AppMistakesRouteImport } from './routes/_app/mistakes'
+import { Route as AppNotificationsRouteImport } from './routes/_app/notifications'
+import { Route as AppPaymentsRouteImport } from './routes/_app/payments'
+import { Route as AppPlanRouteImport } from './routes/_app/plan'
+import { Route as AppProfileRouteImport } from './routes/_app/profile'
+import { Route as AppTodayRouteImport } from './routes/_app/today'
+import { Route as AppTopicsRouteImport } from './routes/_app/topics'
 import { Route as ExamExamIdRouteImport } from './routes/exam.$examId'
-import { Route as ExamStartRouteImport } from './routes/exam.start'
 import { Route as TestTokenRouteImport } from './routes/test.$token'
+import { Route as AppExamStartRouteImport } from './routes/_app/exam.start'
 import { Route as ApiPublicPaystackVerifyRouteImport } from './routes/api/public/paystack-verify'
 import { Route as ExamExamIdIndexRouteImport } from './routes/exam.$examId.index'
-import { Route as ExamExamIdResultsRouteImport } from './routes/exam.$examId.results'
+import { Route as AppExamExamIdResultsRouteImport } from './routes/_app/exam.$examId.results'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AchievementsRoute = AchievementsRouteImport.update({
-  id: '/achievements',
-  path: '/achievements',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AdminRoute = AdminRouteImport.update({
-  id: '/admin',
-  path: '/admin',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AnalysisRoute = AnalysisRouteImport.update({
-  id: '/analysis',
-  path: '/analysis',
+const AppRoute = AppRouteImport.update({
+  id: '/_app',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthRoute = AuthRouteImport.update({
@@ -61,64 +51,9 @@ const AuthRoute = AuthRouteImport.update({
   path: '/auth',
   getParentRoute: () => rootRouteImport,
 } as any)
-const BookmarksRoute = BookmarksRouteImport.update({
-  id: '/bookmarks',
-  path: '/bookmarks',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const DashboardRoute = DashboardRouteImport.update({
-  id: '/dashboard',
-  path: '/dashboard',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const FriendsRoute = FriendsRouteImport.update({
-  id: '/friends',
-  path: '/friends',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const HistoryRoute = HistoryRouteImport.update({
-  id: '/history',
-  path: '/history',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const LeaderboardRoute = LeaderboardRouteImport.update({
-  id: '/leaderboard',
-  path: '/leaderboard',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const MasteryRoute = MasteryRouteImport.update({
-  id: '/mastery',
-  path: '/mastery',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const MistakesRoute = MistakesRouteImport.update({
-  id: '/mistakes',
-  path: '/mistakes',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const NotificationsRoute = NotificationsRouteImport.update({
-  id: '/notifications',
-  path: '/notifications',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const OnboardingRoute = OnboardingRouteImport.update({
   id: '/onboarding',
   path: '/onboarding',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const PaymentsRoute = PaymentsRouteImport.update({
-  id: '/payments',
-  path: '/payments',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const PlanRoute = PlanRouteImport.update({
-  id: '/plan',
-  path: '/plan',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ProfileRoute = ProfileRouteImport.update({
-  id: '/profile',
-  path: '/profile',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ProgressRoute = ProgressRouteImport.update({
@@ -126,30 +61,100 @@ const ProgressRoute = ProgressRouteImport.update({
   path: '/progress',
   getParentRoute: () => rootRouteImport,
 } as any)
-const TodayRoute = TodayRouteImport.update({
+const AppAchievementsRoute = AppAchievementsRouteImport.update({
+  id: '/achievements',
+  path: '/achievements',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppAdminRoute = AppAdminRouteImport.update({
+  id: '/admin',
+  path: '/admin',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppAnalysisRoute = AppAnalysisRouteImport.update({
+  id: '/analysis',
+  path: '/analysis',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppBookmarksRoute = AppBookmarksRouteImport.update({
+  id: '/bookmarks',
+  path: '/bookmarks',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppDashboardRoute = AppDashboardRouteImport.update({
+  id: '/dashboard',
+  path: '/dashboard',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppFriendsRoute = AppFriendsRouteImport.update({
+  id: '/friends',
+  path: '/friends',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppHistoryRoute = AppHistoryRouteImport.update({
+  id: '/history',
+  path: '/history',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppLeaderboardRoute = AppLeaderboardRouteImport.update({
+  id: '/leaderboard',
+  path: '/leaderboard',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppMasteryRoute = AppMasteryRouteImport.update({
+  id: '/mastery',
+  path: '/mastery',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppMistakesRoute = AppMistakesRouteImport.update({
+  id: '/mistakes',
+  path: '/mistakes',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppNotificationsRoute = AppNotificationsRouteImport.update({
+  id: '/notifications',
+  path: '/notifications',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppPaymentsRoute = AppPaymentsRouteImport.update({
+  id: '/payments',
+  path: '/payments',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppPlanRoute = AppPlanRouteImport.update({
+  id: '/plan',
+  path: '/plan',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppProfileRoute = AppProfileRouteImport.update({
+  id: '/profile',
+  path: '/profile',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppTodayRoute = AppTodayRouteImport.update({
   id: '/today',
   path: '/today',
-  getParentRoute: () => rootRouteImport,
+  getParentRoute: () => AppRoute,
 } as any)
-const TopicsRoute = TopicsRouteImport.update({
+const AppTopicsRoute = AppTopicsRouteImport.update({
   id: '/topics',
   path: '/topics',
-  getParentRoute: () => rootRouteImport,
+  getParentRoute: () => AppRoute,
 } as any)
 const ExamExamIdRoute = ExamExamIdRouteImport.update({
   id: '/exam/$examId',
   path: '/exam/$examId',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ExamStartRoute = ExamStartRouteImport.update({
-  id: '/exam/start',
-  path: '/exam/start',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const TestTokenRoute = TestTokenRouteImport.update({
   id: '/test/$token',
   path: '/test/$token',
   getParentRoute: () => rootRouteImport,
+} as any)
+const AppExamStartRoute = AppExamStartRouteImport.update({
+  id: '/exam/start',
+  path: '/exam/start',
+  getParentRoute: () => AppRoute,
 } as any)
 const ApiPublicPaystackVerifyRoute = ApiPublicPaystackVerifyRouteImport.update({
   id: '/api/public/paystack-verify',
@@ -161,104 +166,107 @@ const ExamExamIdIndexRoute = ExamExamIdIndexRouteImport.update({
   path: '/',
   getParentRoute: () => ExamExamIdRoute,
 } as any)
-const ExamExamIdResultsRoute = ExamExamIdResultsRouteImport.update({
-  id: '/results',
-  path: '/results',
-  getParentRoute: () => ExamExamIdRoute,
+const AppExamExamIdResultsRoute = AppExamExamIdResultsRouteImport.update({
+  id: '/exam/$examId/results',
+  path: '/exam/$examId/results',
+  getParentRoute: () => AppRoute,
 } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
-  '/achievements': typeof AchievementsRoute
-  '/admin': typeof AdminRoute
-  '/analysis': typeof AnalysisRoute
   '/auth': typeof AuthRoute
-  '/bookmarks': typeof BookmarksRoute
-  '/dashboard': typeof DashboardRoute
-  '/friends': typeof FriendsRoute
-  '/history': typeof HistoryRoute
-  '/leaderboard': typeof LeaderboardRoute
-  '/mastery': typeof MasteryRoute
-  '/mistakes': typeof MistakesRoute
-  '/notifications': typeof NotificationsRoute
   '/onboarding': typeof OnboardingRoute
-  '/payments': typeof PaymentsRoute
-  '/plan': typeof PlanRoute
-  '/profile': typeof ProfileRoute
   '/progress': typeof ProgressRoute
-  '/today': typeof TodayRoute
-  '/topics': typeof TopicsRoute
+  '/achievements': typeof AppAchievementsRoute
+  '/admin': typeof AppAdminRoute
+  '/analysis': typeof AppAnalysisRoute
+  '/bookmarks': typeof AppBookmarksRoute
+  '/dashboard': typeof AppDashboardRoute
+  '/friends': typeof AppFriendsRoute
+  '/history': typeof AppHistoryRoute
+  '/leaderboard': typeof AppLeaderboardRoute
+  '/mastery': typeof AppMasteryRoute
+  '/mistakes': typeof AppMistakesRoute
+  '/notifications': typeof AppNotificationsRoute
+  '/payments': typeof AppPaymentsRoute
+  '/plan': typeof AppPlanRoute
+  '/profile': typeof AppProfileRoute
+  '/today': typeof AppTodayRoute
+  '/topics': typeof AppTopicsRoute
   '/exam/$examId': typeof ExamExamIdRouteWithChildren
-  '/exam/start': typeof ExamStartRoute
   '/test/$token': typeof TestTokenRoute
+  '/exam/start': typeof AppExamStartRoute
   '/api/public/paystack-verify': typeof ApiPublicPaystackVerifyRoute
-  '/exam/$examId/results': typeof ExamExamIdResultsRoute
   '/exam/$examId/': typeof ExamExamIdIndexRoute
+  '/exam/$examId/results': typeof AppExamExamIdResultsRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/achievements': typeof AchievementsRoute
-  '/admin': typeof AdminRoute
-  '/analysis': typeof AnalysisRoute
   '/auth': typeof AuthRoute
-  '/bookmarks': typeof BookmarksRoute
-  '/dashboard': typeof DashboardRoute
-  '/friends': typeof FriendsRoute
-  '/history': typeof HistoryRoute
-  '/leaderboard': typeof LeaderboardRoute
-  '/mastery': typeof MasteryRoute
-  '/mistakes': typeof MistakesRoute
-  '/notifications': typeof NotificationsRoute
   '/onboarding': typeof OnboardingRoute
-  '/payments': typeof PaymentsRoute
-  '/plan': typeof PlanRoute
-  '/profile': typeof ProfileRoute
   '/progress': typeof ProgressRoute
-  '/today': typeof TodayRoute
-  '/topics': typeof TopicsRoute
-  '/exam/start': typeof ExamStartRoute
+  '/achievements': typeof AppAchievementsRoute
+  '/admin': typeof AppAdminRoute
+  '/analysis': typeof AppAnalysisRoute
+  '/bookmarks': typeof AppBookmarksRoute
+  '/dashboard': typeof AppDashboardRoute
+  '/friends': typeof AppFriendsRoute
+  '/history': typeof AppHistoryRoute
+  '/leaderboard': typeof AppLeaderboardRoute
+  '/mastery': typeof AppMasteryRoute
+  '/mistakes': typeof AppMistakesRoute
+  '/notifications': typeof AppNotificationsRoute
+  '/payments': typeof AppPaymentsRoute
+  '/plan': typeof AppPlanRoute
+  '/profile': typeof AppProfileRoute
+  '/today': typeof AppTodayRoute
+  '/topics': typeof AppTopicsRoute
   '/test/$token': typeof TestTokenRoute
+  '/exam/start': typeof AppExamStartRoute
   '/api/public/paystack-verify': typeof ApiPublicPaystackVerifyRoute
-  '/exam/$examId/results': typeof ExamExamIdResultsRoute
   '/exam/$examId': typeof ExamExamIdIndexRoute
+  '/exam/$examId/results': typeof AppExamExamIdResultsRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
-  '/achievements': typeof AchievementsRoute
-  '/admin': typeof AdminRoute
-  '/analysis': typeof AnalysisRoute
+  '/_app': typeof AppRouteWithChildren
   '/auth': typeof AuthRoute
-  '/bookmarks': typeof BookmarksRoute
-  '/dashboard': typeof DashboardRoute
-  '/friends': typeof FriendsRoute
-  '/history': typeof HistoryRoute
-  '/leaderboard': typeof LeaderboardRoute
-  '/mastery': typeof MasteryRoute
-  '/mistakes': typeof MistakesRoute
-  '/notifications': typeof NotificationsRoute
   '/onboarding': typeof OnboardingRoute
-  '/payments': typeof PaymentsRoute
-  '/plan': typeof PlanRoute
-  '/profile': typeof ProfileRoute
   '/progress': typeof ProgressRoute
-  '/today': typeof TodayRoute
-  '/topics': typeof TopicsRoute
+  '/_app/achievements': typeof AppAchievementsRoute
+  '/_app/admin': typeof AppAdminRoute
+  '/_app/analysis': typeof AppAnalysisRoute
+  '/_app/bookmarks': typeof AppBookmarksRoute
+  '/_app/dashboard': typeof AppDashboardRoute
+  '/_app/friends': typeof AppFriendsRoute
+  '/_app/history': typeof AppHistoryRoute
+  '/_app/leaderboard': typeof AppLeaderboardRoute
+  '/_app/mastery': typeof AppMasteryRoute
+  '/_app/mistakes': typeof AppMistakesRoute
+  '/_app/notifications': typeof AppNotificationsRoute
+  '/_app/payments': typeof AppPaymentsRoute
+  '/_app/plan': typeof AppPlanRoute
+  '/_app/profile': typeof AppProfileRoute
+  '/_app/today': typeof AppTodayRoute
+  '/_app/topics': typeof AppTopicsRoute
   '/exam/$examId': typeof ExamExamIdRouteWithChildren
-  '/exam/start': typeof ExamStartRoute
   '/test/$token': typeof TestTokenRoute
+  '/_app/exam/start': typeof AppExamStartRoute
   '/api/public/paystack-verify': typeof ApiPublicPaystackVerifyRoute
-  '/exam/$examId/results': typeof ExamExamIdResultsRoute
   '/exam/$examId/': typeof ExamExamIdIndexRoute
+  '/_app/exam/$examId/results': typeof AppExamExamIdResultsRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/auth'
+    | '/onboarding'
+    | '/progress'
     | '/achievements'
     | '/admin'
     | '/analysis'
-    | '/auth'
     | '/bookmarks'
     | '/dashboard'
     | '/friends'
@@ -267,26 +275,26 @@ export interface FileRouteTypes {
     | '/mastery'
     | '/mistakes'
     | '/notifications'
-    | '/onboarding'
     | '/payments'
     | '/plan'
     | '/profile'
-    | '/progress'
     | '/today'
     | '/topics'
     | '/exam/$examId'
-    | '/exam/start'
     | '/test/$token'
+    | '/exam/start'
     | '/api/public/paystack-verify'
-    | '/exam/$examId/results'
     | '/exam/$examId/'
+    | '/exam/$examId/results'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/auth'
+    | '/onboarding'
+    | '/progress'
     | '/achievements'
     | '/admin'
     | '/analysis'
-    | '/auth'
     | '/bookmarks'
     | '/dashboard'
     | '/friends'
@@ -295,71 +303,54 @@ export interface FileRouteTypes {
     | '/mastery'
     | '/mistakes'
     | '/notifications'
-    | '/onboarding'
     | '/payments'
     | '/plan'
     | '/profile'
-    | '/progress'
     | '/today'
     | '/topics'
-    | '/exam/start'
     | '/test/$token'
+    | '/exam/start'
     | '/api/public/paystack-verify'
-    | '/exam/$examId/results'
     | '/exam/$examId'
+    | '/exam/$examId/results'
   id:
     | '__root__'
     | '/'
-    | '/achievements'
-    | '/admin'
-    | '/analysis'
+    | '/_app'
     | '/auth'
-    | '/bookmarks'
-    | '/dashboard'
-    | '/friends'
-    | '/history'
-    | '/leaderboard'
-    | '/mastery'
-    | '/mistakes'
-    | '/notifications'
     | '/onboarding'
-    | '/payments'
-    | '/plan'
-    | '/profile'
     | '/progress'
-    | '/today'
-    | '/topics'
+    | '/_app/achievements'
+    | '/_app/admin'
+    | '/_app/analysis'
+    | '/_app/bookmarks'
+    | '/_app/dashboard'
+    | '/_app/friends'
+    | '/_app/history'
+    | '/_app/leaderboard'
+    | '/_app/mastery'
+    | '/_app/mistakes'
+    | '/_app/notifications'
+    | '/_app/payments'
+    | '/_app/plan'
+    | '/_app/profile'
+    | '/_app/today'
+    | '/_app/topics'
     | '/exam/$examId'
-    | '/exam/start'
     | '/test/$token'
+    | '/_app/exam/start'
     | '/api/public/paystack-verify'
-    | '/exam/$examId/results'
     | '/exam/$examId/'
+    | '/_app/exam/$examId/results'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
-  AchievementsRoute: typeof AchievementsRoute
-  AdminRoute: typeof AdminRoute
-  AnalysisRoute: typeof AnalysisRoute
+  AppRoute: typeof AppRouteWithChildren
   AuthRoute: typeof AuthRoute
-  BookmarksRoute: typeof BookmarksRoute
-  DashboardRoute: typeof DashboardRoute
-  FriendsRoute: typeof FriendsRoute
-  HistoryRoute: typeof HistoryRoute
-  LeaderboardRoute: typeof LeaderboardRoute
-  MasteryRoute: typeof MasteryRoute
-  MistakesRoute: typeof MistakesRoute
-  NotificationsRoute: typeof NotificationsRoute
   OnboardingRoute: typeof OnboardingRoute
-  PaymentsRoute: typeof PaymentsRoute
-  PlanRoute: typeof PlanRoute
-  ProfileRoute: typeof ProfileRoute
   ProgressRoute: typeof ProgressRoute
-  TodayRoute: typeof TodayRoute
-  TopicsRoute: typeof TopicsRoute
   ExamExamIdRoute: typeof ExamExamIdRouteWithChildren
-  ExamStartRoute: typeof ExamStartRoute
   TestTokenRoute: typeof TestTokenRoute
   ApiPublicPaystackVerifyRoute: typeof ApiPublicPaystackVerifyRoute
 }
@@ -373,25 +364,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/achievements': {
-      id: '/achievements'
-      path: '/achievements'
-      fullPath: '/achievements'
-      preLoaderRoute: typeof AchievementsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/admin': {
-      id: '/admin'
-      path: '/admin'
-      fullPath: '/admin'
-      preLoaderRoute: typeof AdminRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/analysis': {
-      id: '/analysis'
-      path: '/analysis'
-      fullPath: '/analysis'
-      preLoaderRoute: typeof AnalysisRouteImport
+    '/_app': {
+      id: '/_app'
+      path: ''
+      fullPath: '/'
+      preLoaderRoute: typeof AppRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/auth': {
@@ -401,88 +378,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/bookmarks': {
-      id: '/bookmarks'
-      path: '/bookmarks'
-      fullPath: '/bookmarks'
-      preLoaderRoute: typeof BookmarksRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/dashboard': {
-      id: '/dashboard'
-      path: '/dashboard'
-      fullPath: '/dashboard'
-      preLoaderRoute: typeof DashboardRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/friends': {
-      id: '/friends'
-      path: '/friends'
-      fullPath: '/friends'
-      preLoaderRoute: typeof FriendsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/history': {
-      id: '/history'
-      path: '/history'
-      fullPath: '/history'
-      preLoaderRoute: typeof HistoryRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/leaderboard': {
-      id: '/leaderboard'
-      path: '/leaderboard'
-      fullPath: '/leaderboard'
-      preLoaderRoute: typeof LeaderboardRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/mastery': {
-      id: '/mastery'
-      path: '/mastery'
-      fullPath: '/mastery'
-      preLoaderRoute: typeof MasteryRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/mistakes': {
-      id: '/mistakes'
-      path: '/mistakes'
-      fullPath: '/mistakes'
-      preLoaderRoute: typeof MistakesRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/notifications': {
-      id: '/notifications'
-      path: '/notifications'
-      fullPath: '/notifications'
-      preLoaderRoute: typeof NotificationsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/onboarding': {
       id: '/onboarding'
       path: '/onboarding'
       fullPath: '/onboarding'
       preLoaderRoute: typeof OnboardingRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/payments': {
-      id: '/payments'
-      path: '/payments'
-      fullPath: '/payments'
-      preLoaderRoute: typeof PaymentsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/plan': {
-      id: '/plan'
-      path: '/plan'
-      fullPath: '/plan'
-      preLoaderRoute: typeof PlanRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/profile': {
-      id: '/profile'
-      path: '/profile'
-      fullPath: '/profile'
-      preLoaderRoute: typeof ProfileRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/progress': {
@@ -492,19 +392,117 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ProgressRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/today': {
-      id: '/today'
+    '/_app/achievements': {
+      id: '/_app/achievements'
+      path: '/achievements'
+      fullPath: '/achievements'
+      preLoaderRoute: typeof AppAchievementsRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/admin': {
+      id: '/_app/admin'
+      path: '/admin'
+      fullPath: '/admin'
+      preLoaderRoute: typeof AppAdminRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/analysis': {
+      id: '/_app/analysis'
+      path: '/analysis'
+      fullPath: '/analysis'
+      preLoaderRoute: typeof AppAnalysisRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/bookmarks': {
+      id: '/_app/bookmarks'
+      path: '/bookmarks'
+      fullPath: '/bookmarks'
+      preLoaderRoute: typeof AppBookmarksRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/dashboard': {
+      id: '/_app/dashboard'
+      path: '/dashboard'
+      fullPath: '/dashboard'
+      preLoaderRoute: typeof AppDashboardRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/friends': {
+      id: '/_app/friends'
+      path: '/friends'
+      fullPath: '/friends'
+      preLoaderRoute: typeof AppFriendsRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/history': {
+      id: '/_app/history'
+      path: '/history'
+      fullPath: '/history'
+      preLoaderRoute: typeof AppHistoryRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/leaderboard': {
+      id: '/_app/leaderboard'
+      path: '/leaderboard'
+      fullPath: '/leaderboard'
+      preLoaderRoute: typeof AppLeaderboardRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/mastery': {
+      id: '/_app/mastery'
+      path: '/mastery'
+      fullPath: '/mastery'
+      preLoaderRoute: typeof AppMasteryRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/mistakes': {
+      id: '/_app/mistakes'
+      path: '/mistakes'
+      fullPath: '/mistakes'
+      preLoaderRoute: typeof AppMistakesRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/notifications': {
+      id: '/_app/notifications'
+      path: '/notifications'
+      fullPath: '/notifications'
+      preLoaderRoute: typeof AppNotificationsRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/payments': {
+      id: '/_app/payments'
+      path: '/payments'
+      fullPath: '/payments'
+      preLoaderRoute: typeof AppPaymentsRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/plan': {
+      id: '/_app/plan'
+      path: '/plan'
+      fullPath: '/plan'
+      preLoaderRoute: typeof AppPlanRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/profile': {
+      id: '/_app/profile'
+      path: '/profile'
+      fullPath: '/profile'
+      preLoaderRoute: typeof AppProfileRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/today': {
+      id: '/_app/today'
       path: '/today'
       fullPath: '/today'
-      preLoaderRoute: typeof TodayRouteImport
-      parentRoute: typeof rootRouteImport
+      preLoaderRoute: typeof AppTodayRouteImport
+      parentRoute: typeof AppRoute
     }
-    '/topics': {
-      id: '/topics'
+    '/_app/topics': {
+      id: '/_app/topics'
       path: '/topics'
       fullPath: '/topics'
-      preLoaderRoute: typeof TopicsRouteImport
-      parentRoute: typeof rootRouteImport
+      preLoaderRoute: typeof AppTopicsRouteImport
+      parentRoute: typeof AppRoute
     }
     '/exam/$examId': {
       id: '/exam/$examId'
@@ -513,19 +511,19 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ExamExamIdRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/exam/start': {
-      id: '/exam/start'
-      path: '/exam/start'
-      fullPath: '/exam/start'
-      preLoaderRoute: typeof ExamStartRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/test/$token': {
       id: '/test/$token'
       path: '/test/$token'
       fullPath: '/test/$token'
       preLoaderRoute: typeof TestTokenRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/_app/exam/start': {
+      id: '/_app/exam/start'
+      path: '/exam/start'
+      fullPath: '/exam/start'
+      preLoaderRoute: typeof AppExamStartRouteImport
+      parentRoute: typeof AppRoute
     }
     '/api/public/paystack-verify': {
       id: '/api/public/paystack-verify'
@@ -541,23 +539,65 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ExamExamIdIndexRouteImport
       parentRoute: typeof ExamExamIdRoute
     }
-    '/exam/$examId/results': {
-      id: '/exam/$examId/results'
-      path: '/results'
+    '/_app/exam/$examId/results': {
+      id: '/_app/exam/$examId/results'
+      path: '/exam/$examId/results'
       fullPath: '/exam/$examId/results'
-      preLoaderRoute: typeof ExamExamIdResultsRouteImport
-      parentRoute: typeof ExamExamIdRoute
+      preLoaderRoute: typeof AppExamExamIdResultsRouteImport
+      parentRoute: typeof AppRoute
     }
   }
 }
 
+interface AppRouteChildren {
+  AppAchievementsRoute: typeof AppAchievementsRoute
+  AppAdminRoute: typeof AppAdminRoute
+  AppAnalysisRoute: typeof AppAnalysisRoute
+  AppBookmarksRoute: typeof AppBookmarksRoute
+  AppDashboardRoute: typeof AppDashboardRoute
+  AppFriendsRoute: typeof AppFriendsRoute
+  AppHistoryRoute: typeof AppHistoryRoute
+  AppLeaderboardRoute: typeof AppLeaderboardRoute
+  AppMasteryRoute: typeof AppMasteryRoute
+  AppMistakesRoute: typeof AppMistakesRoute
+  AppNotificationsRoute: typeof AppNotificationsRoute
+  AppPaymentsRoute: typeof AppPaymentsRoute
+  AppPlanRoute: typeof AppPlanRoute
+  AppProfileRoute: typeof AppProfileRoute
+  AppTodayRoute: typeof AppTodayRoute
+  AppTopicsRoute: typeof AppTopicsRoute
+  AppExamStartRoute: typeof AppExamStartRoute
+  AppExamExamIdResultsRoute: typeof AppExamExamIdResultsRoute
+}
+
+const AppRouteChildren: AppRouteChildren = {
+  AppAchievementsRoute: AppAchievementsRoute,
+  AppAdminRoute: AppAdminRoute,
+  AppAnalysisRoute: AppAnalysisRoute,
+  AppBookmarksRoute: AppBookmarksRoute,
+  AppDashboardRoute: AppDashboardRoute,
+  AppFriendsRoute: AppFriendsRoute,
+  AppHistoryRoute: AppHistoryRoute,
+  AppLeaderboardRoute: AppLeaderboardRoute,
+  AppMasteryRoute: AppMasteryRoute,
+  AppMistakesRoute: AppMistakesRoute,
+  AppNotificationsRoute: AppNotificationsRoute,
+  AppPaymentsRoute: AppPaymentsRoute,
+  AppPlanRoute: AppPlanRoute,
+  AppProfileRoute: AppProfileRoute,
+  AppTodayRoute: AppTodayRoute,
+  AppTopicsRoute: AppTopicsRoute,
+  AppExamStartRoute: AppExamStartRoute,
+  AppExamExamIdResultsRoute: AppExamExamIdResultsRoute,
+}
+
+const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)
+
 interface ExamExamIdRouteChildren {
-  ExamExamIdResultsRoute: typeof ExamExamIdResultsRoute
   ExamExamIdIndexRoute: typeof ExamExamIdIndexRoute
 }
 
 const ExamExamIdRouteChildren: ExamExamIdRouteChildren = {
-  ExamExamIdResultsRoute: ExamExamIdResultsRoute,
   ExamExamIdIndexRoute: ExamExamIdIndexRoute,
 }
 
@@ -567,27 +607,11 @@ const ExamExamIdRouteWithChildren = ExamExamIdRoute._addFileChildren(
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
-  AchievementsRoute: AchievementsRoute,
-  AdminRoute: AdminRoute,
-  AnalysisRoute: AnalysisRoute,
+  AppRoute: AppRouteWithChildren,
   AuthRoute: AuthRoute,
-  BookmarksRoute: BookmarksRoute,
-  DashboardRoute: DashboardRoute,
-  FriendsRoute: FriendsRoute,
-  HistoryRoute: HistoryRoute,
-  LeaderboardRoute: LeaderboardRoute,
-  MasteryRoute: MasteryRoute,
-  MistakesRoute: MistakesRoute,
-  NotificationsRoute: NotificationsRoute,
   OnboardingRoute: OnboardingRoute,
-  PaymentsRoute: PaymentsRoute,
-  PlanRoute: PlanRoute,
-  ProfileRoute: ProfileRoute,
   ProgressRoute: ProgressRoute,
-  TodayRoute: TodayRoute,
-  TopicsRoute: TopicsRoute,
   ExamExamIdRoute: ExamExamIdRouteWithChildren,
-  ExamStartRoute: ExamStartRoute,
   TestTokenRoute: TestTokenRoute,
   ApiPublicPaystackVerifyRoute: ApiPublicPaystackVerifyRoute,
 }

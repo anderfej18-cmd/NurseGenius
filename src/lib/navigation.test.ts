@@ -6,7 +6,9 @@ import {
   ADMIN_TABS,
   NAV_NOT_LISTED,
   activeGroupId,
+  activeNavItem,
   adminTabsFor,
+  bottomBarItemsOf,
   isNavItemActive,
   menuItemsOf,
   navigationFor,
@@ -41,7 +43,8 @@ const routePaths = routeFiles(ROUTES_DIR)
   .filter((file) => /\.tsx?$/.test(file) && !file.endsWith("__root.tsx"))
   .flatMap((file) => {
     const match = /createFileRoute\(\s*"([^"]+)"/.exec(readFileSync(file, "utf8"));
-    return match ? [match[1]] : [];
+    // `/_app` is a pathless layout: it adds the navigation frame, not a segment of the address.
+    return match && match[1] !== "/_app" ? [match[1].replace(/^\/_app(?=\/)/, "")] : [];
   });
 
 describe("who sees which navigation", () => {
@@ -226,5 +229,49 @@ describe("the toolbar button", () => {
 
   it("shows no toolbar button to a visitor with no navigation", () => {
     expect(toolbarItemsOf(navigationFor(viewer({ signedIn: false })))).toEqual([]);
+  });
+});
+
+describe("the phone's bottom bar", () => {
+  it("holds the four most used pages for a student, in order", () => {
+    expect(bottomBarItemsOf(navigationFor(student)).map((item) => item.id)).toEqual([
+      "dashboard",
+      "today",
+      "start-test",
+      "mastery",
+    ]);
+  });
+
+  it("holds nothing for an admin who has not finished onboarding (the menu still opens)", () => {
+    expect(bottomBarItemsOf(navigationFor(viewer({ isAdmin: true, onboarded: false })))).toEqual(
+      [],
+    );
+  });
+
+  it("keeps every bottom-bar page in the full menu too, and uses short labels only where set", () => {
+    const menuIds = new Set(
+      navigationFor(student).flatMap((group) => menuItemsOf(group).map((item) => item.id)),
+    );
+    for (const item of bottomBarItemsOf(navigationFor(student))) {
+      expect(menuIds.has(item.id), item.id).toBe(true);
+      if (item.shortLabel) expect(item.shortLabel.length).toBeLessThan(item.label.length);
+    }
+  });
+});
+
+describe("activeNavItem", () => {
+  const groups = navigationFor(admin);
+
+  it("finds the lit button, including pages reached from another page", () => {
+    expect(activeNavItem(groups, { pathname: "/mastery" })?.id).toBe("mastery");
+    expect(activeNavItem(groups, { pathname: "/exam/abc/results" })?.id).toBe("history");
+    expect(activeNavItem(groups, { pathname: "/admin", search: { tab: "bank" } })?.id).toBe(
+      "admin-bank",
+    );
+  });
+
+  it("returns null where no button is lit", () => {
+    expect(activeNavItem(groups, { pathname: "/onboarding" })).toBeNull();
+    expect(activeNavItem([], { pathname: "/dashboard" })).toBeNull();
   });
 });

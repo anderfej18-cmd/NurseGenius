@@ -26,6 +26,7 @@ function setup(overrides: Partial<QuestionAdminStore> = {}) {
     insertMany: vi.fn(async (rows: readonly unknown[]) => rows.length),
     update: vi.fn(async (_id: string, _changes: unknown) => true),
     setStatus: vi.fn(async (_id: string, _status: "active" | "retired") => true),
+    deleteForever: vi.fn(async (_adminId: string, _id: string) => undefined),
     questionScope: vi.fn(
       async (_id: string): Promise<{ examType: "RN" | "RM"; topic: string } | null> => ({
         examType: "RN",
@@ -262,5 +263,22 @@ describe("QuestionAdminService subtopics", () => {
     });
     await expect(service.renameSubtopic(SUBTOPIC, "x")).rejects.toBeInstanceOf(NotFoundError);
     await expect(service.deleteSubtopic(SUBTOPIC)).rejects.toBeInstanceOf(NotFoundError);
+  });
+});
+
+describe("QuestionAdminService delete", () => {
+  it("asks the store to delete for good, naming the admin so the audit log can", async () => {
+    const { service, store } = setup();
+    expect(await service.delete(ADMIN, QUESTION)).toEqual({ deleted: true });
+    expect(store.deleteForever).toHaveBeenCalledWith(ADMIN, QUESTION);
+  });
+
+  it("lets the store's refusal through (a question students answered, a missing one)", async () => {
+    const { service } = setup({
+      deleteForever: vi.fn(async () => {
+        throw new NotFoundError("Question not found.");
+      }),
+    });
+    await expect(service.delete(ADMIN, QUESTION)).rejects.toBeInstanceOf(NotFoundError);
   });
 });

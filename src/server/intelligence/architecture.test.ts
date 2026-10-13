@@ -101,7 +101,16 @@ describe("client-safe server functions", () => {
 
   it("authenticate every function except the listed public ones", () => {
     // Shared-test links are taken by people without an account; the link token is their credential.
-    const publicByDesign = new Set(["getSharedTest", "startSharedTest", "submitSharedTest"]);
+    // listPublicPlans serves the landing page: it returns only active plans' name, price and length,
+    // the rows the database already shows an anonymous visitor (docs/api/plans.md).
+    const publicByDesign = new Set([
+      "getSharedTest",
+      "startSharedTest",
+      "getSharedAttempt",
+      "saveSharedAnswer",
+      "submitSharedTest",
+      "listPublicPlans",
+    ]);
     const unauthenticated = functions.flatMap((path) =>
       read(path)
         .split(/^export const /m)
@@ -119,7 +128,14 @@ describe("client-safe server functions", () => {
     const names = functions.flatMap((path) =>
       [...read(path).matchAll(/^export const (\w+) = createServerFn\(/gm)].map((m) => m[1]),
     );
-    for (const name of ["getSharedTest", "startSharedTest", "submitSharedTest"]) {
+    for (const name of [
+      "getSharedTest",
+      "startSharedTest",
+      "getSharedAttempt",
+      "saveSharedAnswer",
+      "submitSharedTest",
+      "listPublicPlans",
+    ]) {
       expect(names).toContain(name);
     }
   });

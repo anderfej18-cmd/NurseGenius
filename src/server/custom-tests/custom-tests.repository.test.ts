@@ -1,218 +1,323 @@
 import { describe, expect, it } from "vitest";
-import { ConflictError, NotFoundError } from "../errors";
+import { ConflictError, NotFoundError, ValidationError } from "../errors";
 import { createFakeSupabase } from "../testing/fake-supabase";
 import { SupabaseCustomTestStore } from "./custom-tests.repository.server";
 
 const HASH = "a".repeat(64);
-const argsOf = (fake: ReturnType<typeof createFakeSupabase>, target: string, method: string) =>
-  fake.callsOn(target, method).map((call) => call.args);
-const NOW = new Date("2026-10-10T10:00:00.000Z");
+const argsOf = (fake: ReturnType<typeof createFakeSupabase>, target: string) =>
+  fake.callsOn(target, "args").map((call) => call.args[0]);
+const link = { token: "tok", tokenHash: HASH };
+const schedule = {
+  startsAt: "2026-10-11T10:00:00.000Z",
+  expiresAt: "2026-10-12T10:00:00.000Z",
+  durationMinutes: 30,
+};
+const store = (fake: ReturnType<typeof createFakeSupabase>) =>
+  new SupabaseCustomTestStore(fake.client);
 
-describe("SupabaseCustomTestStore", () => {
-  it("creates a test through the atomic function, naming the admin", async () => {
+describe("SupabaseCustomTestStore: administration", () => {
+  it("creates a test through the atomic function, naming the admin, the schedule, the link and the allocations", async () => {
     const fake = createFakeSupabase([{ data: "test-1" }]);
-    const id = await new SupabaseCustomTestStore(fake.client).createTest("admin-1", {
-      title: "Mock",
-      description: "",
-      examType: "RN",
-      sourceMode: "upload",
-      durationMinutes: 30,
-      expiresAt: "2026-10-11T10:00:00.000Z",
-      tokenHash: HASH,
-      questions: [
-        {
-          question_text: "Q",
-          option_a: "a",
-          option_b: "b",
-          option_c: "c",
-          option_d: "d",
-          correct_answer: "A",
-          rationale: null,
-          source_kind: "custom",
-        },
-      ],
-    });
+    const id = await store(fake).createTest(
+      "admin-1",
+      {
+        title: "Mock",
+        description: "",
+        examType: "RN",
+        sourceMode: "existing",
+        allocations: [{ topic: "Pharmacology", count: 5 }],
+        questions: [],
+        ...schedule,
+      },
+      link,
+    );
     expect(id).toBe("test-1");
-    const [args] = argsOf(fake, "rpc:create_custom_test", "args");
-    expect(args[0]).toMatchObject({ _owner_id: "admin-1", _token_hash: HASH, _exam_type: "RN" });
+    expect(argsOf(fake, "rpc:create_live_test")[0]).toMatchObject({
+      _owner_id: "admin-1",
+      _token_hash: HASH,
+      _share_token: "tok",
+      _exam_type: "RN",
+      _starts_at: schedule.startsAt,
+      _expires_at: schedule.expiresAt,
+      _allocations: [{ topic: "Pharmacology", count: 5 }],
+    });
   });
 
-  it("lists the owner's summaries with the numbers parsed", async () => {
+  it("turns the database's named refusals into typed errors", async () => {
+    const pool = createFakeSupabase([{ error: { message: "allocation_exceeds_pool:Pool B:3" } }]);
+    await expect(
+      store(pool).createTest(
+        "a",
+        {
+          title: "t",
+          description: "",
+          examType: "RN",
+          sourceMode: "existing",
+          allocations: [],
+          questions: [],
+          ...schedule,
+        },
+        link,
+      ),
+    ).rejects.toThrow(/Only 3 eligible questions are available in “Pool B”/);
+    const bad = createFakeSupabase([{ error: { message: "invalid_schedule" } }]);
+    await expect(store(bad).republish("a", "t", schedule, link)).rejects.toBeInstanceOf(
+      ValidationError,
+    );
+  });
+
+  it("republishes through the function with the actor, schedule and new link", async () => {
+    const fake = createFakeSupabase([{ data: null }]);
+    await store(fake).republish("admin-1", "test-1", schedule, link);
+    expect(argsOf(fake, "rpc:republish_live_test")[0]).toEqual({
+      _actor_id: "admin-1",
+      _test_id: "test-1",
+      _token_hash: HASH,
+      _share_token: "tok",
+      _starts_at: schedule.startsAt,
+      _expires_at: schedule.expiresAt,
+      _duration_minutes: 30,
+    });
+  });
+
+  it("is not found for a test the actor may not manage", async () => {
+    const fake = createFakeSupabase([{ error: { message: "test_not_found" } }]);
+    await expect(store(fake).republish("a", "t", schedule, link)).rejects.toBeInstanceOf(
+      NotFoundError,
+    );
+  });
+
+  it("lists the actor's tests with the numbers parsed", async () => {
     const fake = createFakeSupabase([
       {
         data: [
           {
             id: "t1",
+            owner_id: "u1",
+            owner_username: "ada",
             title: "T",
             description: null,
             exam_type: "RN",
             source_mode: "upload",
             duration_minutes: 30,
-            expires_at: "x",
+            starts_at: "s",
+            expires_at: "e",
             status: "published",
-            created_at: "y",
+            created_at: "c",
+            share_token: "tok",
+            state: "live",
             question_count: 5,
             participant_count: 2,
             pass_count: 1,
             average_score: "62.50",
+            custom_unimported: 3,
           },
         ],
       },
     ]);
-    const [row] = await new SupabaseCustomTestStore(fake.client).summaries("admin-1");
-    expect(argsOf(fake, "rpc:list_custom_test_summaries", "args")[0][0]).toEqual({
-      _owner_id: "admin-1",
-    });
-    expect(row.average_score).toBe(62.5);
+    const [row] = await store(fake).tests("admin-1");
+    expect(row).toMatchObject({ average_score: 62.5, state: "live", custom_unimported: 3 });
+    expect(argsOf(fake, "rpc:list_live_tests")[0]).toEqual({ _actor_id: "admin-1" });
   });
 
-  it("reads finished attempts for the given tests in one bounded query, never the attempt key hash", async () => {
+  it("reads closed attempts through the function, which decides who may see them", async () => {
     const fake = createFakeSupabase([
       {
         data: [
           {
-            id: "a1",
+            id: "a",
             custom_test_id: "t1",
-            email: "a@b.co",
-            score_pct: "90.00",
+            email: "x@y.z",
+            score_pct: "80.00",
             correct_count: 4,
             total_questions: 5,
-            completed_at: "z",
-            access_hash: "SECRET",
+            completed_at: "c",
           },
         ],
       },
     ]);
-    const rows = await new SupabaseCustomTestStore(fake.client).completedAttempts(["t1", "t2"]);
-    expect(argsOf(fake, "from:custom_test_attempts", "in")[0]).toEqual([
-      "custom_test_id",
-      ["t1", "t2"],
+    expect(await store(fake).closedAttempts("admin-1", ["t1"])).toEqual([
+      {
+        id: "a",
+        custom_test_id: "t1",
+        email: "x@y.z",
+        score_pct: 80,
+        correct_count: 4,
+        total_questions: 5,
+        completed_at: "c",
+      },
     ]);
-    expect(argsOf(fake, "from:custom_test_attempts", "eq")).toContainEqual(["status", "completed"]);
-    expect(argsOf(fake, "from:custom_test_attempts", "limit")).toHaveLength(1);
-    expect(JSON.stringify(rows)).not.toContain("SECRET");
-    expect(rows[0].score_pct).toBe(90);
+    expect(argsOf(fake, "rpc:list_test_attempts")[0]).toEqual({
+      _actor_id: "admin-1",
+      _test_ids: ["t1"],
+    });
   });
 
-  it("finds only a published, unexpired test by its link hash", async () => {
-    const fake = createFakeSupabase([
+  it("imports through the audited function and reports added and skipped", async () => {
+    const fake = createFakeSupabase([{ data: { added: 4, skipped: 1 } }]);
+    expect(await store(fake).importQuestions("admin-1", "t1", "RM", "Maternal")).toEqual({
+      added: 4,
+      skipped: 1,
+    });
+    expect(argsOf(fake, "rpc:import_live_test_questions")[0]).toEqual({
+      _actor_id: "admin-1",
+      _test_id: "t1",
+      _exam_type: "RM",
+      _topic: "Maternal",
+    });
+  });
+});
+
+describe("SupabaseCustomTestStore: candidates", () => {
+  it("reads the state of a link: the shape of a test that exists, only 'closed' for one that does not", async () => {
+    const live = createFakeSupabase([
       {
         data: {
-          id: "t1",
+          state: "upcoming",
+          server_now: "n",
           title: "T",
           description: null,
           exam_type: "RN",
           duration_minutes: 30,
-          expires_at: "x",
+          question_count: 5,
+          starts_at: "s",
+          expires_at: "e",
         },
       },
     ]);
-    const test = await new SupabaseCustomTestStore(fake.client).findPublished(HASH, NOW);
-    expect(argsOf(fake, "from:custom_tests", "eq")).toEqual(
-      expect.arrayContaining([
-        ["token_hash", HASH],
-        ["status", "published"],
-      ]),
+    expect(await store(live).sharedState(HASH)).toEqual({
+      state: "upcoming",
+      serverNow: "n",
+      test: {
+        title: "T",
+        description: null,
+        examType: "RN",
+        durationMinutes: 30,
+        questionCount: 5,
+        startsAt: "s",
+        expiresAt: "e",
+      },
+    });
+    const gone = createFakeSupabase([{ data: { state: "closed", server_now: "n" } }]);
+    expect(await store(gone).sharedState(HASH)).toEqual({
+      state: "closed",
+      serverNow: "n",
+      test: null,
+    });
+  });
+
+  it("starts an attempt in one function call, with the key's hash only", async () => {
+    const fake = createFakeSupabase([{ data: { attempt_id: "att-1", started_at: "x" } }]);
+    expect(await store(fake).startAttempt(HASH, "a@b.co", "keyhash")).toEqual({
+      attemptId: "att-1",
+    });
+    expect(argsOf(fake, "rpc:start_shared_attempt")[0]).toEqual({
+      _token_hash: HASH,
+      _email: "a@b.co",
+      _access_hash: "keyhash",
+    });
+  });
+
+  it("names the schedule refusals as typed errors", async () => {
+    const early = createFakeSupabase([{ error: { message: "test_not_started" } }]);
+    await expect(store(early).startAttempt(HASH, "a@b.co", "k")).rejects.toBeInstanceOf(
+      ConflictError,
     );
-    expect(argsOf(fake, "from:custom_tests", "gt")[0]).toEqual(["expires_at", NOW.toISOString()]);
-    expect(test).toMatchObject({ id: "t1", examType: "RN", durationMinutes: 30 });
-    expect(
-      await new SupabaseCustomTestStore(createFakeSupabase([{ data: null }]).client).findPublished(
-        HASH,
-        NOW,
-      ),
-    ).toBeNull();
-  });
-
-  it("selects shared questions without the answer key or rationale", async () => {
-    const fake = createFakeSupabase([{ data: [] }]);
-    await new SupabaseCustomTestStore(fake.client).sharedQuestions("t1");
-    const columns = String(argsOf(fake, "from:custom_test_questions", "select")[0][0]);
-    expect(columns).not.toMatch(/correct_answer|rationale/);
-    expect(argsOf(fake, "from:custom_test_questions", "eq")[0]).toEqual(["custom_test_id", "t1"]);
-  });
-
-  it("inserts an attempt and returns only its id and start time", async () => {
-    const fake = createFakeSupabase([{ data: { id: "att-1", started_at: "s" } }]);
-    const attempt = await new SupabaseCustomTestStore(fake.client).insertAttempt({
-      testId: "t1",
-      email: "a@b.co",
-      accessHash: "h",
-      totalQuestions: 5,
-    });
-    expect(attempt).toEqual({ attemptId: "att-1", startedAt: "s" });
-    expect(argsOf(fake, "from:custom_test_attempts", "insert")[0][0]).toEqual({
-      custom_test_id: "t1",
-      email: "a@b.co",
-      access_hash: "h",
-      total_questions: 5,
-    });
-  });
-
-  it("submits through the atomic function and turns its named refusals into typed errors", async () => {
-    const ok = createFakeSupabase([{ data: { score: 80, correct: 4, total: 5, results: [] } }]);
-    expect(
-      await new SupabaseCustomTestStore(ok.client).submitAttempt("att-1", "h", [
-        { question_id: "q", user_answer: "A" },
-      ]),
-    ).toMatchObject({ score: 80 });
-    expect(argsOf(ok, "rpc:submit_shared_attempt", "args")[0][0]).toEqual({
-      _attempt_id: "att-1",
-      _access_hash: "h",
-      _answers: [{ question_id: "q", user_answer: "A" }],
-    });
-    const closed = createFakeSupabase([{ error: { message: "ERROR: attempt_closed" } }]);
-    await expect(
-      new SupabaseCustomTestStore(closed.client).submitAttempt("a", "h", []),
-    ).rejects.toBeInstanceOf(ConflictError);
-    const missing = createFakeSupabase([{ error: { message: "ERROR: attempt_not_found" } }]);
-    await expect(
-      new SupabaseCustomTestStore(missing.client).submitAttempt("a", "h", []),
-    ).rejects.toBeInstanceOf(NotFoundError);
-  });
-
-  it("finds an attempt by id and key hash, and claims it only while it has no owner", async () => {
-    const fake = createFakeSupabase([
-      { data: { id: "att-1", email: "a@b.co", user_id: null } },
-      { data: [{ id: "att-1" }] },
-    ]);
-    const store = new SupabaseCustomTestStore(fake.client);
-    expect(await store.findAttempt("att-1", "h")).toEqual({
-      id: "att-1",
-      email: "a@b.co",
-      userId: null,
-    });
-    expect(await store.claimAttempt("att-1", "h", "user-1")).toBe(true);
-    expect(argsOf(fake, "from:custom_test_attempts", "is")[0]).toEqual(["user_id", null]);
-    expect(argsOf(fake, "from:custom_test_attempts", "update")[0][0]).toEqual({
-      user_id: "user-1",
-    });
-  });
-
-  it("republishes only a test the admin owns, and reports whether one matched", async () => {
-    const fake = createFakeSupabase([{ data: [{ id: "t1" }] }, { data: [] }]);
-    const store = new SupabaseCustomTestStore(fake.client);
-    expect(await store.republish("admin-1", "t1", HASH, "2026-10-12T00:00:00.000Z")).toBe(true);
-    expect(argsOf(fake, "from:custom_tests", "eq")).toEqual(
-      expect.arrayContaining([
-        ["id", "t1"],
-        ["owner_id", "admin-1"],
-      ]),
-    );
-    expect(await store.republish("admin-1", "t2", HASH, "2026-10-12T00:00:00.000Z")).toBe(false);
-  });
-
-  it("imports through the atomic function, naming the admin, and maps 'not yours' to not found", async () => {
-    const fake = createFakeSupabase([{ data: 5 }, { error: { message: "ERROR: test_not_found" } }]);
-    const store = new SupabaseCustomTestStore(fake.client);
-    expect(await store.importToBank("admin-1", "t1", "Topic")).toBe(5);
-    expect(argsOf(fake, "rpc:import_custom_test_to_bank", "args")[0][0]).toEqual({
-      _admin_id: "admin-1",
-      _test_id: "t1",
-      _topic: "Topic",
-    });
-    await expect(store.importToBank("admin-2", "t1", "Topic")).rejects.toBeInstanceOf(
+    const closed = createFakeSupabase([{ error: { message: "test_closed" } }]);
+    await expect(store(closed).startAttempt(HASH, "a@b.co", "k")).rejects.toBeInstanceOf(
       NotFoundError,
     );
+  });
+
+  it("reads an attempt as its device sees it, questions carrying no key", async () => {
+    const fake = createFakeSupabase([
+      {
+        data: {
+          status: "in_progress",
+          server_now: "n",
+          started_at: "s",
+          deadline_at: "d",
+          test: { title: "T", description: null, exam_type: "RN", duration_minutes: 30 },
+          user_id: null,
+          email: "a@b.co",
+          result: null,
+          questions: [
+            {
+              id: "q1",
+              position: 0,
+              question_text: "Q",
+              option_a: "a",
+              option_b: "b",
+              option_c: "c",
+              option_d: "d",
+              answer: "B",
+              flagged: true,
+            },
+          ],
+        },
+      },
+    ]);
+    const attempt = await store(fake).attempt("att-1", "keyhash");
+    expect(attempt).toMatchObject({
+      status: "in_progress",
+      linked: false,
+      email: "a@b.co",
+      deadlineAt: "d",
+    });
+    expect(attempt.questions[0]).toMatchObject({ answer: "B", flagged: true });
+    expect(JSON.stringify(attempt)).not.toMatch(/correct_answer/);
+  });
+
+  it("saves one answer through the function, sending no answer as null", async () => {
+    const fake = createFakeSupabase([{ data: null }]);
+    await store(fake).saveAnswer({
+      attemptId: "att-1",
+      accessHash: "h",
+      questionId: "q1",
+      answer: "B",
+      flagged: true,
+    });
+    expect(argsOf(fake, "rpc:save_shared_answer")[0]).toMatchObject({
+      _answer: "B",
+      _flagged: true,
+    });
+    const expired = createFakeSupabase([{ error: { message: "attempt_expired" } }]);
+    await expect(
+      store(expired).saveAnswer({
+        attemptId: "att-1",
+        accessHash: "h",
+        questionId: "q1",
+        answer: null,
+        flagged: false,
+      }),
+    ).rejects.toBeInstanceOf(ConflictError);
+  });
+
+  it("submits only the key's hash and the answers, never a score", async () => {
+    const fake = createFakeSupabase([{ data: { score: 80, correct: 4, total: 5, results: [] } }]);
+    await store(fake).submitAttempt("att-1", "keyhash", [{ question_id: "q1", user_answer: "A" }]);
+    expect(argsOf(fake, "rpc:submit_shared_attempt")[0]).toEqual({
+      _attempt_id: "att-1",
+      _access_hash: "keyhash",
+      _answers: [{ question_id: "q1", user_answer: "A" }],
+    });
+  });
+
+  it("claims only an unclaimed attempt with the right key", async () => {
+    const fake = createFakeSupabase([{ data: [{ id: "att-1" }] }]);
+    expect(await store(fake).claimAttempt("att-1", "keyhash", "user-1")).toBe(true);
+    expect(fake.callsOn("from:custom_test_attempts", "update").map((c) => c.args)).toEqual([
+      [{ user_id: "user-1" }],
+    ]);
+    expect(fake.callsOn("from:custom_test_attempts", "eq").map((c) => c.args)).toEqual([
+      ["id", "att-1"],
+      ["access_hash", "keyhash"],
+    ]);
+    expect(fake.callsOn("from:custom_test_attempts", "is").map((c) => c.args)).toEqual([
+      ["user_id", null],
+    ]);
+    expect(
+      await store(createFakeSupabase([{ data: [] }])).claimAttempt("att-1", "keyhash", "user-1"),
+    ).toBe(false);
   });
 });

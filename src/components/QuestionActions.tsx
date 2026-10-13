@@ -1,5 +1,5 @@
+import { Bookmark, BookmarkCheck, Flag } from "lucide-react";
 import { useState } from "react";
-import { Bookmark, Flag } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
@@ -10,7 +10,14 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Label } from "@/components/ui/label";
+import { Field } from "@/components/ui/field";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { addBookmark } from "@/functions/bookmarks.functions";
 import { createQuestionReport } from "@/functions/reports.functions";
@@ -26,22 +33,25 @@ const REASON_TEXT: Record<ReportReason, string> = {
   other: "Something else",
 };
 
-/** Bookmark and report buttons for one finished question. */
+/** Bookmark and report buttons for one finished question; reporting opens a short form in a dialog. */
 export function QuestionActions({ questionId }: { questionId: string }) {
   const [bookmarked, setBookmarked] = useState(false);
+  const [saving, setSaving] = useState(false);
   const [reporting, setReporting] = useState(false);
   const [reason, setReason] = useState<ReportReason>("incorrect_answer");
   const [details, setDetails] = useState("");
   const [busy, setBusy] = useState(false);
 
   const bookmark = async () => {
+    setSaving(true);
     try {
       await addBookmark({ data: { questionId } });
       setBookmarked(true);
-      toast.success("Bookmarked");
+      toast.success("Bookmarked.");
     } catch (error) {
       toast.error((error as Error).message);
     }
+    setSaving(false);
   };
 
   const report = async () => {
@@ -61,11 +71,19 @@ export function QuestionActions({ questionId }: { questionId: string }) {
 
   return (
     <>
-      <Button size="sm" variant="outline" disabled={bookmarked} onClick={() => void bookmark()}>
-        <Bookmark className="h-4 w-4 mr-1" /> {bookmarked ? "Bookmarked" : "Bookmark"}
+      <Button
+        size="sm"
+        variant="outline"
+        disabled={bookmarked}
+        loading={saving}
+        onClick={() => void bookmark()}
+      >
+        {bookmarked ? <BookmarkCheck /> : <Bookmark />}
+        {bookmarked ? "Bookmarked" : "Bookmark"}
       </Button>
       <Button size="sm" variant="outline" onClick={() => setReporting(true)}>
-        <Flag className="h-4 w-4 mr-1" /> Report
+        <Flag />
+        Report
       </Button>
 
       <Dialog open={reporting} onOpenChange={setReporting}>
@@ -76,39 +94,40 @@ export function QuestionActions({ questionId }: { questionId: string }) {
               Tell us what is wrong so an administrator can check it.
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-3">
-            <div>
-              <Label htmlFor={`reason-${questionId}`}>What is wrong?</Label>
-              <select
-                id={`reason-${questionId}`}
-                className="mt-1 h-10 w-full rounded-md border bg-background px-2 text-sm"
-                value={reason}
-                onChange={(event) => setReason(event.target.value as ReportReason)}
-              >
-                {REPORT_REASONS.map((value) => (
-                  <option key={value} value={value}>
-                    {REASON_TEXT[value]}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <Label htmlFor={`details-${questionId}`}>More detail (optional)</Label>
-              <Textarea
-                id={`details-${questionId}`}
-                maxLength={1000}
-                value={details}
-                onChange={(event) => setDetails(event.target.value)}
-                className="mt-1"
-              />
-            </div>
+          <div className="flex flex-col gap-4">
+            <Field label="What is wrong?">
+              {({ id, ...rest }) => (
+                <Select value={reason} onValueChange={(value) => setReason(value as ReportReason)}>
+                  <SelectTrigger id={id} {...rest}>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {REPORT_REASONS.map((value) => (
+                      <SelectItem key={value} value={value}>
+                        {REASON_TEXT[value]}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+            </Field>
+            <Field label="More detail" hint="Optional. Up to 1,000 characters.">
+              {(control) => (
+                <Textarea
+                  {...control}
+                  maxLength={1000}
+                  value={details}
+                  onChange={(event) => setDetails(event.target.value)}
+                />
+              )}
+            </Field>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setReporting(false)}>
               Cancel
             </Button>
-            <Button disabled={busy} onClick={() => void report()}>
-              {busy ? "Sending…" : "Send report"}
+            <Button loading={busy} onClick={() => void report()}>
+              Send report
             </Button>
           </DialogFooter>
         </DialogContent>

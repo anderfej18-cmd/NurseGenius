@@ -1,6 +1,7 @@
 import { RefreshCw, Sparkles } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 import { getAiInsight } from "@/functions/ai-insights.functions";
 import { useServerData } from "@/hooks/use-server-data";
 import type { InsightKind } from "@/lib/ai-insights";
@@ -37,12 +38,12 @@ export function InsightCard({ kind, availableMinutes, examType }: Props) {
     <section
       aria-label="Explanation"
       aria-busy={insight.loading}
-      className="rounded-lg border bg-muted/40 p-4 space-y-2"
+      className="flex flex-col gap-3 rounded-lg bg-sunken p-4"
     >
       <div className="flex items-center justify-between gap-2">
-        <div className="flex items-center gap-2">
-          <Sparkles className="h-4 w-4 text-primary" aria-hidden />
-          <h3 className="text-sm font-semibold">In plain words</h3>
+        <div className="flex flex-wrap items-center gap-2">
+          <Sparkles aria-hidden="true" className="size-4 text-primary" />
+          <h3 className="font-sans text-sm font-semibold tracking-normal">In plain words</h3>
           {result && (
             <Badge variant={insightBadge(result).tone === "ai" ? "default" : "secondary"}>
               {insightBadge(result).label}
@@ -50,18 +51,22 @@ export function InsightCard({ kind, availableMinutes, examType }: Props) {
           )}
         </div>
         <Button
-          size="sm"
+          size="icon"
           variant="ghost"
           onClick={() => void insight.reload()}
           disabled={insight.loading}
           aria-label="Refresh explanation"
         >
-          <RefreshCw className={`h-4 w-4 ${insight.loading ? "animate-spin" : ""}`} aria-hidden />
+          <RefreshCw aria-hidden="true" className={insight.loading ? "animate-spin" : undefined} />
         </Button>
       </div>
 
       {insight.loading && !result && (
-        <p className="text-sm text-muted-foreground">Writing your explanation…</p>
+        <div className="flex flex-col gap-2" aria-busy="true">
+          <span className="sr-only">Writing your explanation</span>
+          <Skeleton className="h-4 w-full" />
+          <Skeleton className="h-4 w-4/5" />
+        </div>
       )}
       {insight.error && !result && (
         <p className="text-sm text-destructive" role="alert">
@@ -71,9 +76,9 @@ export function InsightCard({ kind, availableMinutes, examType }: Props) {
 
       {result && (
         <>
-          <p className="text-sm">{result.narrative.summary}</p>
+          <p className="measure text-sm">{result.narrative.summary}</p>
           {result.narrative.points.length > 0 && (
-            <ul className="text-sm space-y-1 list-disc pl-5">
+            <ul className="flex list-disc flex-col gap-1 pl-5 text-sm">
               {result.narrative.points.map((point) => (
                 <li key={`${point.topic ?? "general"}-${point.text}`}>
                   {point.topic !== null && <span className="font-medium">{point.topic}: </span>}
@@ -87,8 +92,10 @@ export function InsightCard({ kind, availableMinutes, examType }: Props) {
             <p className="text-xs text-muted-foreground">{insightNotice(result)}</p>
           )}
           <details className="text-xs text-muted-foreground">
-            <summary className="cursor-pointer">What this is based on</summary>
-            <ul className="mt-1 space-y-0.5 list-disc pl-5">
+            <summary className="cursor-pointer rounded-sm focus-ring">
+              What this is based on
+            </summary>
+            <ul className="mt-2 flex list-disc flex-col gap-0.5 pl-5">
               {result.facts.map((fact) => (
                 <li key={fact}>{fact}</li>
               ))}

@@ -6,7 +6,7 @@ import reactRefresh from "eslint-plugin-react-refresh";
 import tseslint from "typescript-eslint";
 
 export default tseslint.config(
-  { ignores: ["dist", ".output", ".vinxi"] },
+  { ignores: ["dist", ".output", ".vinxi", "src/integrations/supabase/**"] },
   {
     extends: [js.configs.recommended, ...tseslint.configs.recommended],
     files: ["**/*.{ts,tsx}"],
@@ -39,7 +39,12 @@ export default tseslint.config(
   {
     // Frontend/backend boundary: UI code may only reach server code through client-safe
     // `*.functions.ts` modules in src/functions/ (see AGENTS.md). Privileged helpers stay server-side.
-    files: ["src/routes/**/*.{ts,tsx}", "src/components/**/*.{ts,tsx}", "src/hooks/**/*.{ts,tsx}", "src/lib/**/*.{ts,tsx}"],
+    files: [
+      "src/routes/**/*.{ts,tsx}",
+      "src/components/**/*.{ts,tsx}",
+      "src/hooks/**/*.{ts,tsx}",
+      "src/lib/**/*.{ts,tsx}",
+    ],
     ignores: ["src/routes/api/**"],
     rules: {
       "no-restricted-imports": [
@@ -53,7 +58,8 @@ export default tseslint.config(
             },
             {
               name: "@/integrations/supabase/client.server",
-              message: "The service-role client is backend-only. Use it from src/server/ or server routes.",
+              message:
+                "The service-role client is backend-only. Use it from src/server/ or server routes.",
             },
             {
               name: "@/integrations/supabase/auth-middleware",

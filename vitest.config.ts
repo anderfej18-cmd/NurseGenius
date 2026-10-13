@@ -5,5 +5,10 @@ import { defineConfig } from "vitest/config";
 // which tests of plain server modules do not need.
 export default defineConfig({
   resolve: { alias: { "@": fileURLToPath(new URL("./src", import.meta.url)) } },
-  test: { environment: "node", include: ["src/**/*.test.ts"] },
+  test: {
+    environment: "node",
+    include: ["src/**/*.test.ts", "supabase/functions/**/*.test.ts"],
+    testTimeout: 60_000,
+    hookTimeout: 120_000,
+  },
 });

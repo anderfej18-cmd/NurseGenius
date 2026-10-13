@@ -2,9 +2,11 @@ import { describe, expect, it } from "vitest";
 import {
   claimAttemptSchema,
   createCustomTestSchema,
+  getAttemptSchema,
   getSharedTestSchema,
   importCustomTestQuestionsSchema,
   republishCustomTestSchema,
+  saveAnswerSchema,
   startSharedTestSchema,
   submitSharedTestSchema,
 } from "./custom-tests.schemas";
@@ -73,7 +75,55 @@ describe("shared-test links (public, so the schemas are the only gate)", () => {
   });
 });
 
-describe("admin custom-test functions", () => {
+describe("resume and save (public)", () => {
+  it("accepts an attempt id with its key, and one answer with its flag", () => {
+    expect(getAttemptSchema.safeParse({ attemptId: ID, accessKey: KEY }).success).toBe(true);
+    for (const answer of ["A", null]) {
+      expect(
+        saveAnswerSchema.safeParse({
+          attemptId: ID,
+          accessKey: KEY,
+          questionId: ID,
+          answer,
+          flagged: true,
+        }).success,
+      ).toBe(true);
+    }
+  });
+
+  it.each([
+    [getAttemptSchema, { attemptId: "nope", accessKey: KEY }],
+    [getAttemptSchema, { attemptId: ID }],
+    [
+      saveAnswerSchema,
+      { attemptId: ID, accessKey: KEY, questionId: ID, answer: "AB", flagged: false },
+    ],
+    [saveAnswerSchema, { attemptId: ID, accessKey: KEY, questionId: ID, answer: "A" }],
+    [
+      saveAnswerSchema,
+      { attemptId: ID, accessKey: KEY, questionId: "nope", answer: "A", flagged: false },
+    ],
+    [
+      saveAnswerSchema,
+      { attemptId: ID, accessKey: KEY, questionId: ID, answer: "A", flagged: "yes" },
+    ],
+    [
+      saveAnswerSchema,
+      {
+        attemptId: ID,
+        accessKey: KEY,
+        questionId: ID,
+        answer: "A",
+        flagged: false,
+        is_correct: true,
+      },
+    ],
+  ])("rejects %#", (schema, payload) => {
+    expect(schema.safeParse(payload).success).toBe(false);
+  });
+});
+
+describe("admin live-test functions", () => {
   const question = {
     question_text: "Q?",
     option_a: "a",
@@ -82,53 +132,65 @@ describe("admin custom-test functions", () => {
     option_d: "d",
     correct_answer: "A",
     rationale: null,
-    source_kind: "custom",
   };
-  const test = {
+  const schedule = {
+    startsAt: "2026-12-01T09:00:00.000Z",
+    expiresAt: "2026-12-02T09:00:00.000Z",
+    durationMinutes: 30,
+  };
+  const upload = {
     title: "Mock",
     description: "",
     examType: "RN",
     sourceMode: "upload",
-    durationMinutes: 30,
-    expiresAt: "2026-12-01T00:00:00.000Z",
-    tokenHash: HASH,
+    ...schedule,
     questions: [question],
   };
+  const bank = {
+    title: "Mock",
+    description: "",
+    examType: "RM",
+    sourceMode: "existing",
+    ...schedule,
+    allocations: [
+      { topic: "Antenatal care", count: 10 },
+      { topic: "Postnatal care", count: 5 },
+    ],
+  };
 
-  it("accepts a test, and a question that came from the bank", () => {
-    expect(createCustomTestSchema.safeParse(test).success).toBe(true);
-    expect(
-      createCustomTestSchema.safeParse({
-        ...test,
-        questions: [{ ...question, source_kind: "existing", source_question_id: ID }],
-      }).success,
-    ).toBe(true);
+  it("accepts an upload test and a bank test with per-subcategory counts", () => {
+    expect(createCustomTestSchema.safeParse(upload).success).toBe(true);
+    expect(createCustomTestSchema.safeParse(bank).success).toBe(true);
   });
 
   it.each([
-    [{ ...test, examType: "XX" }],
-    [{ ...test, sourceMode: "paste" }],
-    [{ ...test, durationMinutes: "30" }],
-    [{ ...test, title: "x".repeat(201) }],
-    [{ ...test, questions: Array(251).fill(question) }],
-    [{ ...test, questions: [{ ...question, source_kind: "other" }] }],
-    [{ ...test, questions: [{ ...question, question_text: 5 }] }],
-    [{ ...test, owner_id: "someone-else" }],
+    [{ ...upload, examType: "XX" }],
+    [{ ...upload, sourceMode: "paste" }],
+    [{ ...upload, durationMinutes: "30" }],
+    [{ ...upload, startsAt: undefined }],
+    [{ ...upload, title: "x".repeat(201) }],
+    [{ ...upload, questions: Array(251).fill(question) }],
+    [{ ...upload, questions: [{ ...question, question_text: 5 }] }],
+    [{ ...upload, questions: [{ ...question, source_kind: "existing" }] }],
+    [{ ...upload, tokenHash: HASH }],
+    [{ ...upload, owner_id: "someone-else" }],
+    [{ ...upload, allocations: [{ topic: "A", count: 1 }] }],
+    [{ ...bank, questions: [question] }],
+    [{ ...bank, allocations: [{ topic: "", count: 1 }] }],
+    [{ ...bank, allocations: [{ topic: "A", count: 0 }] }],
+    [{ ...bank, allocations: [{ topic: "A", count: 251 }] }],
+    [{ ...bank, allocations: [{ topic: "A", count: 1.5 }] }],
   ])("rejects the test %#", (payload) => {
     expect(createCustomTestSchema.safeParse(payload).success).toBe(false);
   });
 
-  it("validates republish and import", () => {
+  it("validates republish with a new schedule, and import with an exam type and subcategory", () => {
+    expect(republishCustomTestSchema.safeParse({ testId: ID, ...schedule }).success).toBe(true);
+    expect(republishCustomTestSchema.safeParse({ testId: "nope", ...schedule }).success).toBe(
+      false,
+    );
     expect(
-      republishCustomTestSchema.safeParse({ testId: ID, tokenHash: HASH, expiresAt: "2026-12-01" })
-        .success,
-    ).toBe(true);
-    expect(
-      republishCustomTestSchema.safeParse({
-        testId: "nope",
-        tokenHash: HASH,
-        expiresAt: "2026-12-01",
-      }).success,
+      republishCustomTestSchema.safeParse({ testId: ID, ...schedule, tokenHash: HASH }).success,
     ).toBe(false);
     expect(
       importCustomTestQuestionsSchema.safeParse({

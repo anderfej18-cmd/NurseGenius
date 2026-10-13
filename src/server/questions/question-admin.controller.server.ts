@@ -42,6 +42,8 @@ export const questionAdminController = {
       subtopicId?: string | null;
     },
   ) => asAdmin(caller, () => service().update(input)),
+  delete: (caller: Caller, input: { questionId: string }) =>
+    asAdmin(caller, (admin) => service().delete(admin, input.questionId)),
   retire: (caller: Caller, input: { questionId: string }) =>
     asAdmin(caller, () => service().retire(input.questionId)),
   restore: (caller: Caller, input: { questionId: string }) =>
